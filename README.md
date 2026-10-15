@@ -24,7 +24,7 @@ the Moonlight project, or by the Artemis Android client. The Windows and Linux b
 - Updating from the Moonlight-named Mac build keeps everything: the bundle identifier stays
   `com.moonlight-stream.Moonlight` and the settings names stay those of Moonlight, so saved PCs, pairing certificates,
   settings, the window position and the microphone and Local Network permissions carry over. Delete the old
-  `Moonlight.app` after installing `Artemis.app`.
+  `Moonlight.app` after installing `Artemis.app`: with the same bundle identifier, macOS may open the old app instead.
 - The interface strings keep saying Moonlight in the source, so every translation still matches; on macOS a
   translator (`settings/streamingpreferences.cpp`) puts Artemis in their place. Names of upstream resources stay:
   the Help menu's Moonlight Setup Guide (it opens Moonlight's wiki), "the Moonlight help" and the Moonlight Internet
