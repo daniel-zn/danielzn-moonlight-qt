@@ -68,6 +68,10 @@ if [ "$BUILD_CONFIG" == "Debug" ]; then EXTRA_ARGS="$EXTRA_ARGS -use-debug-libs"
 echo Extra deployment arguments: $EXTRA_ARGS
 macdeployqt $BUILD_FOLDER/app/Artemis.app $EXTRA_ARGS -qmldir=$SOURCE_ROOT/app/gui -appstore-compliant || fail "macdeployqt failed!"
 
+# Qt's Mimer SQL driver links /usr/local/lib/libmimerapi.dylib, which isn't shipped; the app
+# uses no SQL drivers, so leave it out rather than ship a plugin that can't load
+rm -f $BUILD_FOLDER/app/Artemis.app/Contents/PlugIns/sqldrivers/libqsqlmimer.dylib
+
 echo Removing dSYM files from app bundle
 find $BUILD_FOLDER/app/Artemis.app/ -name '*.dSYM' | xargs rm -rf
 
