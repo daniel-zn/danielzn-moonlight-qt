@@ -13,13 +13,13 @@ You can follow development on our [Discord server](https://moonlight-stream.org/
 ## About this fork
 
 > [!NOTE]
-> This is a personal fork (`daniel-zn/moonlight-qt`, default branch `main`) made to pair with
-> [daniel-zn/Apollo](https://github.com/daniel-zn/Apollo). It doesn't follow upstream updates.
+> This is a personal fork (`daniel-zn/danielzn-moonlight-qt`, default branch `main`) made to pair with
+> [daniel-zn/danielzn-Apollo](https://github.com/daniel-zn/danielzn-Apollo). It doesn't follow upstream updates.
 
 What it adds on top of upstream Moonlight:
 
 - **Microphone passthrough to the host.** Moonlight captures your microphone and sends it to an Apollo host
-  from [daniel-zn/Apollo](https://github.com/daniel-zn/Apollo), which plays it into
+  from [daniel-zn/danielzn-Apollo](https://github.com/daniel-zn/danielzn-Apollo), which plays it into
   `Microphone (Steam Streaming Microphone)` on the PC for games and voice chat.
   - Audio goes as 20 ms Opus frames over UDP, encrypted and authenticated with AES-GCM under the session key.
     The host advertises support with `a=x-apollo-mic:2`, so normal streaming to any other host is unaffected.
