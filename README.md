@@ -16,9 +16,23 @@ You can follow development on our [Discord server](https://moonlight-stream.org/
 > This is a personal fork (`daniel-zn/danielzn-moonlight-qt`, default branch `main`) made to pair with
 > [daniel-zn/danielzn-Apollo](https://github.com/daniel-zn/danielzn-Apollo). It doesn't follow upstream updates.
 
+**On macOS the app is named Artemis** (`Artemis.app`, `Artemis.dmg`). It pairs with the iPhone app Artemis
+([daniel-zn/danielzn-moonlight-ios](https://github.com/daniel-zn/danielzn-moonlight-ios)) and with Apollo hosts from
+[daniel-zn/danielzn-Apollo](https://github.com/daniel-zn/danielzn-Apollo). It isn't affiliated with or endorsed by
+the Moonlight project, or by the Artemis Android client. The Windows and Linux builds keep the name Moonlight.
+
+- Updating from the Moonlight-named Mac build keeps everything: the bundle identifier stays
+  `com.moonlight-stream.Moonlight` and the settings names stay those of Moonlight, so saved PCs, pairing certificates,
+  settings, the window position and the microphone and Local Network permissions carry over. Delete the old
+  `Moonlight.app` after installing `Artemis.app`.
+- The interface strings keep saying Moonlight in the source, so every translation still matches; on macOS a
+  translator (`settings/streamingpreferences.cpp`) puts Artemis in their place. Names of upstream resources stay:
+  the Help menu's Moonlight Setup Guide (it opens Moonlight's wiki), "the Moonlight help" and the Moonlight Internet
+  Hosting Tool. Log files, crash dumps and command-line help also still say Moonlight.
+
 What it adds on top of upstream Moonlight:
 
-- **Microphone passthrough to the host.** Moonlight captures your microphone and sends it to an Apollo host
+- **Microphone passthrough to the host.** The app captures your microphone and sends it to an Apollo host
   from [daniel-zn/danielzn-Apollo](https://github.com/daniel-zn/danielzn-Apollo), which plays it into
   `Microphone (Steam Streaming Microphone)` on the PC for games and voice chat.
   - Audio goes as 20 ms Opus frames over UDP, encrypted and authenticated with AES-GCM under the session key.
@@ -41,12 +55,12 @@ What it adds on top of upstream Moonlight:
   - Settings laid out like System Settings: a sidebar of sections (Video & Display, Audio & Microphone,
     Keyboard & Mouse, Game Controllers, Host PC, General, Advanced), one section at a time, with macOS type sizes.
     The window grows while Settings is open and returns to its size afterwards.
-  - ⌘Q (or Dock ▸ Quit) during a stream ends the stream cleanly and then quits Moonlight.
-  - Mac app conventions: the window reopens where you left it, About Moonlight and Settings… are in the
+  - ⌘Q (or Dock ▸ Quit) during a stream ends the stream cleanly and then quits the app.
+  - Mac app conventions: the window reopens where you left it, About Artemis and Settings… are in the
     app menu, a Window menu has Minimize (⌘M) and Zoom, and pairing shows the PIN large.
 - **Build changes:**
   - `qmake -r CONFIG+=ui_probe` builds in a UI self-test hook (`app/gui/uiprobe.*`, off in normal builds): with
-    `MOONLIGHT_UI_PROBE=<script.qml>` Moonlight runs that script, which can drive the UI, save window screenshots
+    `MOONLIGHT_UI_PROBE=<script.qml>` the app runs that script, which can drive the UI, save window screenshots
     and quit, so the macOS UI can be checked without anyone at the screen.
   - `moonlight-common-c` (with the microphone protocol) is included directly instead of as a submodule.
   - macOS: a microphone usage description and audio-input entitlement. DMGs built without a signing identity are

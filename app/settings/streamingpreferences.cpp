@@ -11,6 +11,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QtMath>
+#include <QRegularExpression>
 
 #include <QtDebug>
 
@@ -67,6 +68,40 @@ static StreamingPreferences* s_GlobalPrefs;
 Q_GLOBAL_STATIC(QReadWriteLock, s_GlobalPrefsLock)
 
 namespace {
+#ifdef Q_OS_DARWIN
+    // The macOS app is named Artemis. Its strings keep saying Moonlight in the source so
+    // every translation still matches; this translator, queried before the language one,
+    // looks the text up there and renames the app in it. Names of upstream Moonlight resources
+    // (its setup guide, help and Internet Hosting Tool) stay as they are.
+    class AppNameTranslator : public QTranslator
+    {
+    public:
+        QString translate(const char* context, const char* sourceText,
+                          const char* disambiguation, int n) const override
+        {
+            if (sourceText == nullptr || strstr(sourceText, "Moonlight") == nullptr) {
+                return QString();
+            }
+
+            QString text = language != nullptr ? language->translate(context, sourceText, disambiguation, n) : QString();
+            if (text.isNull()) {
+                text = QString::fromUtf8(sourceText);
+            }
+
+            static const QRegularExpression appName(
+                "\\bMoonlight\\b(?! (Internet Hosting Tool|Setup Guide|help))");
+            return text.replace(appName, QStringLiteral("Artemis"));
+        }
+
+        bool isEmpty() const override
+        {
+            return false;
+        }
+
+        const QTranslator* language = nullptr;
+    };
+#endif
+
     QString kMicrophoneDeniedText()
     {
         return QCoreApplication::translate("StreamingPreferences",
@@ -244,6 +279,13 @@ bool StreamingPreferences::retranslate()
     }
 #endif
 
+#ifdef Q_OS_DARWIN
+    // Take the app name translator out before the language translator it reads goes away
+    static AppNameTranslator* appNameTranslator = new AppNameTranslator();
+    QCoreApplication::removeTranslator(appNameTranslator);
+    appNameTranslator->language = nullptr;
+#endif
+
     QTranslator* newTranslator = new QTranslator();
     QString languageSuffix = getSuffixFromLanguage(language);
 
@@ -266,6 +308,12 @@ bool StreamingPreferences::retranslate()
         qInfo() << "No translation available for" << languageSuffix;
         delete newTranslator;
     }
+
+#ifdef Q_OS_DARWIN
+    // Reinstall the app name translator so it's queried before the language one
+    appNameTranslator->language = translator;
+    QCoreApplication::installTranslator(appNameTranslator);
+#endif
 
     if (m_QmlEngine != nullptr) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)

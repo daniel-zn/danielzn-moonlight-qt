@@ -436,6 +436,11 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("Moonlight Game Streaming Project");
     QCoreApplication::setOrganizationDomain("moonlight-stream.com");
     QCoreApplication::setApplicationName("Moonlight");
+#ifdef Q_OS_DARWIN
+    // The macOS app is named Artemis. The names above stay, so settings, paired PCs and
+    // their certificates carry over from Moonlight.
+    QGuiApplication::setApplicationDisplayName("Artemis");
+#endif
 
     if (QFile(QDir::currentPath() + "/portable.dat").exists()) {
         QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -720,8 +725,13 @@ int main(int argc, char *argv[])
     // Set our app name for SDL to use with PulseAudio and PipeWire. This matches what we
     // provide as our app name to libsoundio too. On SDL 2.0.18+, SDL_APP_NAME is also used
     // for screensaver inhibitor reporting.
+#ifdef Q_OS_DARWIN
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, "Artemis");
+    SDL_SetHint(SDL_HINT_APP_NAME, "Artemis");
+#else
     SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_NAME, "Moonlight");
     SDL_SetHint(SDL_HINT_APP_NAME, "Moonlight");
+#endif
 
     // SDL will try to lock the mouse cursor on Wayland if it's not visible in order to
     // support applications that assume they can warp the cursor (which isn't possible

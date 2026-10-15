@@ -4,8 +4,10 @@ CONFIG += c++17
 unix:!macx {
     TARGET = moonlight
 } else {
-    # On macOS, this is the name displayed in the global menu bar
-    TARGET = Moonlight
+    # On macOS, this is the name displayed in the global menu bar. The macOS app is
+    # named Artemis (Artemis.app); Windows and Linux keep Moonlight.
+    macx: TARGET = Artemis
+    else: TARGET = Moonlight
 }
 
 include(../globaldefs.pri)

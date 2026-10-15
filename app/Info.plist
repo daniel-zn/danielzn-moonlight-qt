@@ -5,7 +5,9 @@
 	<key>GCSupportsGameMode</key>
 	<true/>
 	<key>CFBundleExecutable</key>
-	<string>Moonlight</string>
+	<string>Artemis</string>
+	<key>CFBundleName</key>
+	<string>Artemis</string>
 	<key>LSSupportsGameMode</key>
 	<true/>
 	<key>CFBundleGetInfoString</key>
@@ -41,9 +43,9 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Moonlight uses the local network to connect to your gaming PC for streaming.</string>
+	<string>Artemis uses the local network to connect to your gaming PC for streaming.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Moonlight streams your microphone to the host PC when microphone passthrough is enabled.</string>
+	<string>Artemis streams your microphone to the host PC when microphone passthrough is enabled.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_nvstream._tcp</string>
@@ -53,7 +55,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>VERSION</string>
 	<key>CFBundleDisplayName</key>
-	<string>Moonlight</string>
+	<string>Artemis</string>
     <key>LSApplicationCategoryType</key>
 	<string>public.app-category.games</string>
 </dict>
