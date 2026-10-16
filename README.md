@@ -34,8 +34,10 @@ the Moonlight project, or by the Artemis Android client. The Windows and Linux b
   translator rewords the English text on macOS only; other languages and the Windows and Linux builds keep
   upstream's wording.
 - **The macOS interface font is Orbix** (Barry Shawn, Besign Foundry; SIL Open Font License 1.1, in `app/res/fonts`
-  with its license, bundled in `Artemis.app/Contents/Resources/fonts`). Characters Orbix doesn't have (`:` `;` `(`
-  `)` `+` `%` `…` and other symbols) come from the system font. The menu bar, the toolbar, right-click menus, the
+  with its license, bundled in `Artemis.app/Contents/Resources/fonts`). Digits come from the system font, as in the
+  iPhone app (Orbix's 1 reads as a 7): the app registers a copy of the font, in memory only, whose character map
+  leaves out 0–9. Characters Orbix doesn't have (`:` `;` `(` `)` `+` `%` `…` and other symbols) come from the system
+  font too. The menu bar, the toolbar, right-click menus, the
   About panel, permission prompts and the stream's statistics overlay keep the system's fonts.
 
 What it adds on top of upstream Moonlight:

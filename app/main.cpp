@@ -11,6 +11,8 @@
 #include <QPalette>
 #include <QFont>
 #include <QFontDatabase>
+#include <QRawFont>
+#include <QtEndian>
 #include <QCursor>
 #include <QElapsedTimer>
 #include <QTemporaryFile>
@@ -424,6 +426,90 @@ void configureSignalHandlers()
 
 #endif
 
+#ifdef Q_OS_DARWIN
+// Orbix's digits are hard to read (its 1 looks like a 7), so the app shows digits in the
+// system font, as the iPhone app does. Qt has no per-font character range, so this
+// returns a copy of the font data, in memory only, whose character map leaves out 0-9:
+// Qt then takes them from the next family in the list. The bundled file stays as it is.
+static QByteArray fontDataWithoutDigits(const QByteArray& data)
+{
+    QRawFont raw(data, 16);
+    if (!raw.isValid() || data.size() < 12) {
+        return QByteArray();
+    }
+
+    // Every BMP character the font maps, except the digits, each in its own segment
+    QList<QPair<quint16, quint16>> map;
+    for (uint c = 0x20; c < 0xFFFF; c++) {
+        if ((c >= '0' && c <= '9') || !raw.supportsCharacter(QChar(c))) {
+            continue;
+        }
+        QChar ch(c);
+        quint32 glyph = 0;
+        int count = 1;
+        if (raw.glyphIndexesForChars(&ch, 1, &glyph, &count) && count == 1 && glyph != 0) {
+            map.append({quint16(c), quint16(glyph)});
+        }
+    }
+
+    // A format 4 cmap (Windows Unicode BMP): one segment per character plus the final 0xFFFF one
+    const quint16 segCount = quint16(map.size() + 1);
+    quint16 entrySelector = 0;
+    while ((2u << entrySelector) <= segCount) {
+        entrySelector++;
+    }
+    const quint16 searchRange = quint16(2u << entrySelector);
+    QByteArray sub(16 + segCount * 8, '\0');
+    auto put16 = [](QByteArray& b, int at, quint16 v) { qToBigEndian(v, b.data() + at); };
+    put16(sub, 0, 4);
+    put16(sub, 2, quint16(sub.size()));
+    put16(sub, 6, segCount * 2);
+    put16(sub, 8, searchRange);
+    put16(sub, 10, entrySelector);
+    put16(sub, 12, quint16(segCount * 2 - searchRange));
+    const int ends = 14, starts = ends + segCount * 2 + 2, deltas = starts + segCount * 2;
+    for (int i = 0; i < segCount; i++) {
+        const quint16 c = i < map.size() ? map[i].first : 0xFFFF;
+        const quint16 delta = i < map.size() ? quint16(map[i].second - c) : 1;
+        put16(sub, ends + i * 2, c);
+        put16(sub, starts + i * 2, c);
+        put16(sub, deltas + i * 2, delta);
+    }
+    QByteArray cmap(12, '\0');
+    put16(cmap, 2, 1);
+    put16(cmap, 4, 3);
+    put16(cmap, 6, 1);
+    qToBigEndian(quint32(12), cmap.data() + 8);
+    cmap += sub;
+    while (cmap.size() % 4) {
+        cmap += '\0';
+    }
+
+    // Append it and point the table directory's cmap entry at it
+    QByteArray out = data;
+    while (out.size() % 4) {
+        out += '\0';
+    }
+    const quint32 offset = quint32(out.size());
+    out += cmap;
+    const quint16 numTables = qFromBigEndian<quint16>(out.constData() + 4);
+    for (int i = 0; i < numTables && 12 + i * 16 + 16 <= data.size(); i++) {
+        char* record = out.data() + 12 + i * 16;
+        if (memcmp(record, "cmap", 4) == 0) {
+            quint32 sum = 0;
+            for (int j = 0; j < cmap.size(); j += 4) {
+                sum += qFromBigEndian<quint32>(cmap.constData() + j);
+            }
+            qToBigEndian(sum, record + 4);
+            qToBigEndian(offset, record + 8);
+            qToBigEndian(quint32(cmap.size()), record + 12);
+            return out;
+        }
+    }
+    return QByteArray();
+}
+#endif
+
 int main(int argc, char *argv[])
 {
     SDL_SetMainReady();
@@ -781,8 +867,12 @@ int main(int argc, char *argv[])
     app.styleHints()->setTabFocusBehavior(Qt::TabFocusAllControls);
 
     // The macOS app's interface font is Orbix (Contents/Resources/fonts). The system font
-    // stays next in the list and draws the characters Orbix lacks (: ; ( ) + % and others).
-    if (QFontDatabase::addApplicationFont(QCoreApplication::applicationDirPath() + "/../Resources/fonts/Orbix-Regular.otf") >= 0) {
+    // stays next in the list and draws the digits (see fontDataWithoutDigits()) and the
+    // characters Orbix lacks (: ; ( ) + % and others).
+    QFile orbix(QCoreApplication::applicationDirPath() + "/../Resources/fonts/Orbix-Regular.otf");
+    QByteArray orbixData = orbix.open(QIODevice::ReadOnly) ? orbix.readAll() : QByteArray();
+    QByteArray orbixLetters = fontDataWithoutDigits(orbixData);
+    if (QFontDatabase::addApplicationFontFromData(orbixLetters.isEmpty() ? orbixData : orbixLetters) >= 0) {
         QFont font = app.font();
         font.setFamilies({"Orbix", font.family()});
         app.setFont(font);
