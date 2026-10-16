@@ -586,7 +586,9 @@ macx {
 
     QMAKE_INFO_PLIST = $$OUT_PWD/Info.plist
 
-    APP_BUNDLE_RESOURCES.files = moonlight.icns
+    # Icon Composer icon compiled by scripts/generate-mac-icon.sh: Assets.car for the
+    # macOS 26 icon, Artemis.icns for older versions
+    APP_BUNDLE_RESOURCES.files = deploy/macos/icon/Assets.car deploy/macos/icon/Artemis.icns
     APP_BUNDLE_RESOURCES.path = Contents/Resources
 
     APP_BUNDLE_PLIST.files = $$OUT_PWD/Info.plist

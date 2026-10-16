@@ -13,7 +13,9 @@
 	<key>CFBundleGetInfoString</key>
 	<string>Stream games and other applications from another PC</string>
 	<key>CFBundleIconFile</key>
-	<string>moonlight</string>
+	<string>Artemis</string>
+	<key>CFBundleIconName</key>
+	<string>Artemis</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.moonlight-stream.Moonlight</string>
 	<key>NSHighResolutionCapable</key>
