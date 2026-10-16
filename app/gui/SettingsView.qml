@@ -29,11 +29,13 @@ Flickable {
     // Two columns side by side elsewhere. macOS shows one section at a time next to a
     // sidebar of sections, like System Settings.
     property bool twoColumns: !NativeChrome.enabled
-    readonly property real sidebarWidth: NativeChrome.enabled ? 210 : 0
+    readonly property real sidebarWidth: NativeChrome.enabled ? 236 : 0
 
     // Type sizes: the macOS body and secondary sizes there, upstream's elsewhere
     readonly property real bodyPointSize: NativeChrome.enabled ? 13 : 12
     readonly property real captionPointSize: NativeChrome.enabled ? 11 : 9
+    // The macOS display font's lines sit close together
+    readonly property real captionLineHeight: NativeChrome.enabled ? 1.2 : 1.0
     readonly property int titleWeight: NativeChrome.enabled ? Font.DemiBold : Font.Normal
 
     // The section shown on macOS (remembered for the session by main.qml)
@@ -86,8 +88,8 @@ Flickable {
         var top = Screen.virtualY + 25
         var screenWidth = Screen.width
         var screenHeight = Screen.height - 25
-        var newWidth = Math.min(Math.max(window.width, 760), screenWidth)
-        var newHeight = Math.min(Math.max(window.height, 560), screenHeight)
+        var newWidth = Math.min(Math.max(window.width, 860), screenWidth)
+        var newHeight = Math.min(Math.max(window.height, 600), screenHeight)
         // Grow around the window's center, animated like a native window. main.qml has
         // faded the page out first, so nothing re-lays out on screen. The enlarged size
         // isn't the one to reopen at, so the window stops remembering its frame meanwhile.
@@ -337,6 +339,7 @@ Flickable {
                     id: resFPSdesc
                     text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
                     font.pointSize: settingsPage.captionPointSize
+                    lineHeight: settingsPage.captionLineHeight
                     wrapMode: Text.Wrap
                 }
 
@@ -894,6 +897,7 @@ Flickable {
                     id: bitrateDesc
                     text: qsTr("Lower the bitrate on slower connections. Raise the bitrate to increase image quality.")
                     font.pointSize: settingsPage.captionPointSize
+                    lineHeight: settingsPage.captionLineHeight
                     wrapMode: Text.Wrap
                 }
 

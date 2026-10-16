@@ -718,6 +718,8 @@ ApplicationWindow {
             Label {
                 text: addPcDialog.label
                 font.bold: true
+                wrapMode: Text.Wrap
+                Layout.maximumWidth: NativeChrome.enabled ? 300 : Number.POSITIVE_INFINITY
             }
 
             TextField {

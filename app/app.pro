@@ -594,7 +594,11 @@ macx {
     APP_BUNDLE_PLIST.files = $$OUT_PWD/Info.plist
     APP_BUNDLE_PLIST.path = Contents
 
-    QMAKE_BUNDLE_DATA += APP_BUNDLE_RESOURCES APP_BUNDLE_PLIST
+    # The interface font (Orbix, SIL Open Font License), with its license next to it
+    APP_BUNDLE_FONTS.files = res/fonts/Orbix-Regular.otf res/fonts/OFL.txt
+    APP_BUNDLE_FONTS.path = Contents/Resources/fonts
+
+    QMAKE_BUNDLE_DATA += APP_BUNDLE_RESOURCES APP_BUNDLE_PLIST APP_BUNDLE_FONTS
 
     !disable-prebuilts {
         APP_BUNDLE_FRAMEWORKS.files = $$files(../libs/mac/Frameworks/*.framework, true) $$files(../libs/mac/lib/*.dylib, true)

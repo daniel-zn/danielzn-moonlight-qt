@@ -12,6 +12,7 @@
 #include <QDateTime>
 #include <QtMath>
 #include <QRegularExpression>
+#include <QHash>
 
 #include <QtDebug>
 
@@ -69,23 +70,127 @@ Q_GLOBAL_STATIC(QReadWriteLock, s_GlobalPrefsLock)
 
 namespace {
 #ifdef Q_OS_DARWIN
-    // The macOS app is named Artemis. Its strings keep saying Moonlight in the source so
-    // every translation still matches; this translator, queried before the language one,
-    // looks the text up there and renames the app in it. Names of upstream Moonlight resources
-    // (its setup guide, help and Internet Hosting Tool) stay as they are.
+    // Artemis is a screen-sharing app for the user's own PC, so on macOS its English text
+    // talks about apps and sessions rather than games and streams. Keyed by
+    // "<context>|<source text>" where a short word means something else elsewhere.
+    const QHash<QString, QString>& artemisWording()
+    {
+        static const QHash<QString, QString> wording = {
+            { "MacMenuBar|Game", "App" },
+            { "MacMenuBar|Launch", "Connect" },
+            { "MacAppRow|Running", "Active" },
+            { "AppView|Quit", "End Session" },
+            { "End Game on PC…", "End Session…" },
+            { "Launch Automatically When Opening PC", "Connect Automatically When Opening PC" },
+            { "Launch Game", "Connect" },
+            { "Resume Game", "Resume" },
+            { "Quit Game", "End Session" },
+            { "Direct Launch", "Connect Automatically" },
+            { "Launch this app immediately when the host is selected, bypassing the app selection grid.",
+              "Connect to this app as soon as the PC is opened, skipping the app list." },
+            { "Hide this game from the app grid. To access hidden games, right-click on the host and choose %1.",
+              "Hide this app from the list. To see hidden apps, right-click the PC and choose %1." },
+            { "Are you sure you want to quit %1? Any unsaved progress will be lost.",
+              "End the session? %1 closes on the PC, and unsaved work in it will be lost." },
+            { "Quitting %1...", "Ending %1…" },
+            { "Quitting app...", "Ending the session…" },
+            { "Quitting app failed, reason: %1", "Ending the session failed: %1" },
+            { "Starting %1...", "Connecting to %1…" },
+            { "Resuming %1...", "Resuming %1…" },
+            { "Starting %1 failed: Error %2", "Connecting to %1 failed: Error %2" },
+            { "Running Game ID: %1", "Active App ID: %1" },
+            { "The running game wasn't started by this PC. ", "The active app wasn't started by this PC. " },
+            { "You cannot pair while a previous session is still running on the host PC. Quit any running games or reboot the host PC, then try pairing again.",
+              "You can't pair while a session is still active on the host PC. End it or restart the host PC, then try pairing again." },
+            { "Game Controllers", "Controllers" },
+            { "Optimize game settings for streaming", "Optimize app settings for the session" },
+            { "Quit app on host PC after ending stream", "Close the app on the PC when the session ends" },
+            { "This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!",
+              "Ending the session closes the app on the PC. Unsaved work in it will be lost." },
+            { "Mute audio stream when Moonlight is not the active window", "Mute the session when Moonlight isn't the active window" },
+            { "Mutes Moonlight's audio when you Alt+Tab out of the stream or click on a different window.",
+              "Mutes the session's audio when you switch to another app or window." },
+            { "Optimize mouse for remote desktop instead of games", "Optimize mouse for remote desktop" },
+            { "This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.",
+              "Moves the pointer in and out of the session without capturing it. Best for desktop work; apps that need a captured mouse, like games, won't work with it." },
+            { "Only enable this option when streaming a game that doesn't support gamepads being connected after startup.",
+              "Only turn this on for an app that doesn't notice gamepads connected after it starts." },
+            { "Good for streaming desktop and text-heavy games, but not recommended for fast-paced games.",
+              "Good for desktop work and text, but not recommended for fast motion." },
+            { "This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.",
+              "This unlocks extremely high video bitrates for use with Sunshine hosts. Only use it over an Ethernet LAN connection." },
+            { "The stream will be HDR-capable, but some games may require an HDR monitor on your host PC to enable HDR mode.",
+              "The session will be HDR-capable, but some apps may need an HDR monitor on your host PC to turn on HDR." },
+            { "HDR streaming is not supported on this PC.", "HDR sessions aren't supported on this PC." },
+            { "Resolutions that are not supported by your client or host PC may cause streaming errors.",
+              "Resolutions that your Mac or host PC doesn't support may cause errors in the session." },
+            { "Something went wrong on your host PC when starting the stream.", "Something went wrong on your host PC when starting the session." },
+            { "Unable to initialize video decoder. Please check your streaming settings and try again.",
+              "Unable to initialize video decoder. Please check your video settings and try again." },
+        };
+        return wording;
+    }
+
+    // Wording the table doesn't list word for word
+    QString artemisRewording(QString text)
+    {
+        static const QList<QPair<QRegularExpression, QString>> rules = {
+            { QRegularExpression("\\bgaming PC\\b"), "PC" },
+            { QRegularExpression("\\bGames\\b"), "Apps" },
+            { QRegularExpression("\\bgames\\b"), "apps" },
+            { QRegularExpression("\\bGame\\b"), "App" },
+            { QRegularExpression("\\bgame\\b"), "app" },
+            { QRegularExpression("\\bstreaming performance\\b"), "performance" },
+            { QRegularExpression("\\b(while|when) streaming\\b"), "during a session" },
+            { QRegularExpression("\\bto stream from\\b"), "to connect to" },
+            { QRegularExpression("\\bStreaming over the Internet\\b"), "Connecting over the Internet" },
+            { QRegularExpression("\\bstream over the Internet\\b"), "connect over the Internet" },
+            { QRegularExpression("\\bfor HDR streaming\\b"), "for HDR" },
+            { QRegularExpression("\\bHDR streaming\\b"), "HDR sessions" },
+            { QRegularExpression("\\bYUV 4:4:4 streaming\\b"), "YUV 4:4:4 video" },
+            { QRegularExpression("\\bstreaming video resolutions\\b"), "video resolutions" },
+            { QRegularExpression("\\bfor 4K streaming\\b"), "for 4K" },
+        };
+        const QString original = text;
+        for (const auto& rule : rules) {
+            text.replace(rule.first, rule.second);
+        }
+        return text == original ? QString() : text;
+    }
+
+    // The macOS app is named Artemis and talks about apps and sessions. Its strings keep
+    // the upstream wording in the source so every translation still matches; this
+    // translator, queried before the language one, rewords English text (text the language
+    // has no translation for) and renames the app in all of it. Names of upstream
+    // Moonlight resources (its setup guide, help and Internet Hosting Tool) stay as they are.
     class AppNameTranslator : public QTranslator
     {
     public:
         QString translate(const char* context, const char* sourceText,
                           const char* disambiguation, int n) const override
         {
-            if (sourceText == nullptr || strstr(sourceText, "Moonlight") == nullptr) {
+            if (sourceText == nullptr) {
                 return QString();
             }
 
             QString text = language != nullptr ? language->translate(context, sourceText, disambiguation, n) : QString();
             if (text.isNull()) {
-                text = QString::fromUtf8(sourceText);
+                const QString source = QString::fromUtf8(sourceText);
+                const auto& wording = artemisWording();
+                text = wording.value(QString::fromUtf8(context) + '|' + source,
+                                     wording.value(source));
+                if (text.isNull()) {
+                    text = artemisRewording(source);
+                }
+                if (text.isNull() && !source.contains("Moonlight")) {
+                    return QString();
+                }
+                if (text.isNull()) {
+                    text = source;
+                }
+            }
+            else if (strstr(sourceText, "Moonlight") == nullptr) {
+                return QString();
             }
 
             static const QRegularExpression appName(

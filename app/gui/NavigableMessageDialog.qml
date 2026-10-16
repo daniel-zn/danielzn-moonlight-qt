@@ -90,6 +90,7 @@ NavigableDialog {
             text: dialogText + ((helpText && (standardButtons & Dialog.Help)) ? (helpTextSeparator + helpText) : "")
             wrapMode: Text.Wrap
             elide: Label.ElideRight
+            lineHeight: NativeChrome.enabled ? 1.15 : 1.0
 
             // Cap the width so the dialog doesn't grow horizontally forever. This
             // will cause word wrap to kick in.

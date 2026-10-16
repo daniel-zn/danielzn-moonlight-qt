@@ -124,6 +124,7 @@ CenteredGridView {
             wrapMode: Text.Wrap
             opacity: 0.65
             font.pixelSize: 11
+            lineHeight: 1.2
             text: StreamingPreferences.enableMdns ?
                       qsTr("Moonlight finds PCs running Apollo or Sunshine on your network. You can also add one with the + button.") :
                       qsTr("Automatic PC discovery is off. Add your PC with the + button.")
@@ -662,6 +663,8 @@ CenteredGridView {
             Label {
                 text: renamePcDialog.label
                 font.bold: true
+                wrapMode: Text.Wrap
+                Layout.maximumWidth: NativeChrome.enabled ? 300 : Number.POSITIVE_INFINITY
             }
 
             TextField {

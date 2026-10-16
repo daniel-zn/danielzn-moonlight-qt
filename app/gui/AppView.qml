@@ -165,11 +165,13 @@ CenteredGridView {
             Button {
                 focusPolicy: Qt.NoFocus
                 text: qsTr("Resume")
+                font.pixelSize: 11
                 onClicked: launchOrResumeSelectedApp(true)
             }
             Button {
                 focusPolicy: Qt.NoFocus
                 text: qsTr("Quit")
+                font.pixelSize: 11
                 onClicked: doQuitGame()
             }
         }
@@ -460,6 +462,7 @@ CenteredGridView {
             wrapMode: Text.Wrap
             opacity: 0.65
             font.pixelSize: 11
+            lineHeight: 1.2
             text: qsTr("This PC has no apps, or they're hidden. To see hidden ones, go back, select the PC, and choose Computer ▸ Show All Games, Including Hidden.")
         }
     }

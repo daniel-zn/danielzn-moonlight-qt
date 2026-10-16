@@ -29,6 +29,14 @@ the Moonlight project, or by the Artemis Android client. The Windows and Linux b
   translator (`settings/streamingpreferences.cpp`) puts Artemis in their place. Names of upstream resources stay:
   the Help menu's Moonlight Setup Guide (it opens Moonlight's wiki), "the Moonlight help" and the Moonlight Internet
   Hosting Tool. Log files, crash dumps and command-line help also still say Moonlight.
+- **Artemis is a screen-sharing app, so its macOS wording talks about apps and sessions**, not games and streams
+  (the same words as the iPhone app): Apps, Connect, Active, End Session, Hidden apps, Controllers. The same
+  translator rewords the English text on macOS only; other languages and the Windows and Linux builds keep
+  upstream's wording.
+- **The macOS interface font is Orbix** (Barry Shawn, Besign Foundry; SIL Open Font License 1.1, in `app/res/fonts`
+  with its license, bundled in `Artemis.app/Contents/Resources/fonts`). Characters Orbix doesn't have (`:` `;` `(`
+  `)` `+` `%` `…` and other symbols) come from the system font. The menu bar, the toolbar, right-click menus, the
+  About panel, permission prompts and the stream's statistics overlay keep the system's fonts.
 
 What it adds on top of upstream Moonlight:
 
@@ -44,16 +52,16 @@ What it adds on top of upstream Moonlight:
   wrapping at 400 px as upstream intended):
   - A native toolbar with SF Symbols in the title bar, drawn on Liquid Glass on macOS 26 and later.
   - A translucent glass window and native macOS controls that follow light/dark mode and the accent color.
-  - A compact window with lists instead of tiles: PCs with their status, and games with a small box art
-    thumbnail and Resume/Quit on a running game.
-  - Lists work like Finder: click selects, double-click (or Return) opens. Double-clicking a PC opens its games,
-    pairs it, or, if it's asleep, sends Wake-on-LAN and shows "Waking up…". Double-clicking a game launches or
-    resumes it.
-  - A real menu bar (Computer, Game, Go, Help) with every action and its shortcut (⌘N add, ⌘O open, ⌘I info,
-    ⌘R launch, ⌘[ back, ⌘, settings), and native right-click menus.
-  - SF Symbol icons and rounded dialogs whose buttons say what they do (Remove, Quit Game, Add, Rename).
+  - A compact window with lists instead of tiles: PCs with their status, and apps with a small artwork
+    thumbnail and Resume/End Session on an active app.
+  - Lists work like Finder: click selects, double-click (or Return) opens. Double-clicking a PC opens its apps,
+    pairs it, or, if it's asleep, sends Wake-on-LAN and shows "Waking up…". Double-clicking an app connects to it
+    or resumes it.
+  - A real menu bar (Computer, App, Go, Help) with every action and its shortcut (⌘N add, ⌘O open, ⌘I info,
+    ⌘R connect, ⌘[ back, ⌘, settings), and native right-click menus.
+  - SF Symbol icons and rounded dialogs whose buttons say what they do (Remove, End Session, Add, Rename).
   - Settings laid out like System Settings: a sidebar of sections (Video & Display, Audio & Microphone,
-    Keyboard & Mouse, Game Controllers, Host PC, General, Advanced), one section at a time, with macOS type sizes.
+    Keyboard & Mouse, Controllers, Host PC, General, Advanced), one section at a time.
     The window grows while Settings is open and returns to its size afterwards.
   - ⌘Q (or Dock ▸ Quit) during a stream ends the stream cleanly and then quits the app.
   - Mac app conventions: the window reopens where you left it, About Artemis and Settings… are in the

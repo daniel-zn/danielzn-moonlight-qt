@@ -45,9 +45,9 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Artemis uses the local network to connect to your gaming PC for streaming.</string>
+	<string>Artemis uses the local network to find and connect to your PC.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Artemis streams your microphone to the host PC when microphone passthrough is enabled.</string>
+	<string>Artemis sends your microphone to your PC during a session when microphone passthrough is on.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_nvstream._tcp</string>

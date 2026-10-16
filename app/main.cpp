@@ -10,6 +10,7 @@
 #include <QNetworkProxyFactory>
 #include <QPalette>
 #include <QFont>
+#include <QFontDatabase>
 #include <QCursor>
 #include <QElapsedTimer>
 #include <QTemporaryFile>
@@ -778,6 +779,17 @@ int main(int argc, char *argv[])
     // the user to enable a system accessibility setting. Other platforms already
     // default to this behavior.
     app.styleHints()->setTabFocusBehavior(Qt::TabFocusAllControls);
+
+    // The macOS app's interface font is Orbix (Contents/Resources/fonts). The system font
+    // stays next in the list and draws the characters Orbix lacks (: ; ( ) + % and others).
+    if (QFontDatabase::addApplicationFont(QCoreApplication::applicationDirPath() + "/../Resources/fonts/Orbix-Regular.otf") >= 0) {
+        QFont font = app.font();
+        font.setFamilies({"Orbix", font.family()});
+        app.setFont(font);
+    }
+    else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load the interface font; using the system font");
+    }
 #endif
 
 #ifdef Q_OS_UNIX
