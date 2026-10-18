@@ -661,8 +661,12 @@ Flickable {
                         property int lastIndexValue
 
                         function updateBitrateForSelection() {
-                            // Only modify the bitrate if the values actually changed
-                            var selectedFps = parseInt(model.get(fpsComboBox.currentIndex).video_fps)
+                            // macOS Auto: keep fps as this display's rate (the bitrate shown follows it);
+                            // each session reads the display again when it starts
+                            var selectedAuto = model.get(fpsComboBox.currentIndex).is_auto === true
+                            StreamingPreferences.autoFps = selectedAuto
+                            var selectedFps = selectedAuto ? StreamingPreferences.autoFrameRate(Window.window)
+                                                           : parseInt(model.get(fpsComboBox.currentIndex).video_fps)
                             if (StreamingPreferences.fps !== selectedFps) {
                                 StreamingPreferences.fps = selectedFps
 
@@ -800,7 +804,8 @@ Flickable {
                                                     {
                                                         "text": description,
                                                         "video_fps": ""+refreshRate,
-                                                        "is_custom": custom
+                                                        "is_custom": custom,
+                                                        "is_auto": false
                                                     })
                             }
 
@@ -808,6 +813,11 @@ Flickable {
                         }
 
                         function reinitialize() {
+                            // The Auto entry (macOS) is added back at the top below
+                            if (fpsListModel.count > 0 && fpsListModel.get(0).is_auto === true) {
+                                fpsListModel.remove(0)
+                            }
+
                             // Add native refresh rate for all attached displays
                             var done = false
                             for (var displayIndex = 0; !done; displayIndex++) {
@@ -842,6 +852,12 @@ Flickable {
                                 addRefreshRateOrdered(model, "", qsTr("Custom"), true)
                             }
 
+                            if (Qt.platform.os === "osx") {
+                                fpsListModel.insert(0, { "text": qsTr("Auto (match display)"), "video_fps": "",
+                                                         "is_custom": false, "is_auto": true })
+                                currentIndex = StreamingPreferences.autoFps ? 0 : currentIndex + 1
+                            }
+
                             recalculateWidth()
 
                             lastIndexValue = currentIndex
@@ -860,11 +876,13 @@ Flickable {
                                 text: qsTr("30 FPS")
                                 video_fps: "30"
                                 is_custom: false
+                                is_auto: false
                             }
                             ListElement {
                                 text: qsTr("60 FPS")
                                 video_fps: "60"
                                 is_custom: false
+                                is_auto: false
                             }
                         }
 
@@ -881,6 +899,18 @@ Flickable {
                             }
                         }
                     }
+                }
+
+                Label {
+                    id: autoFpsDesc
+                    width: parent.width
+                    visible: Qt.platform.os === "osx" && StreamingPreferences.autoFps
+                    // Screen.name re-reads the rate when the window moves to another display
+                    text: visible ? (Screen.name, qsTr("Auto: %1 FPS on this display. Each session matches the display the Artemis window is on when it starts.")
+                                                  .arg(StreamingPreferences.autoFrameRate(Window.window))) : ""
+                    font.pointSize: settingsPage.captionPointSize
+                    lineHeight: settingsPage.captionLineHeight
+                    wrapMode: Text.Wrap
                 }
 
                 Label {

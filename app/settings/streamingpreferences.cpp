@@ -1,4 +1,5 @@
 #include "streamingpreferences.h"
+#include "autoframerate.h"
 #include "SDL_compat.h"
 #include "utils.h"
 #include "streaming/audio/capture/micpermission.h"
@@ -20,6 +21,7 @@
 #define SER_WIDTH "width"
 #define SER_HEIGHT "height"
 #define SER_FPS "fps"
+#define SER_AUTOFPS "autofps"
 #define SER_BITRATE "bitrate"
 #define SER_UNLOCK_BITRATE "unlockbitrate"
 #define SER_AUTOADJUSTBITRATE "autoadjustbitrate"
@@ -303,6 +305,13 @@ void StreamingPreferences::reload()
     width = settings.value(SER_WIDTH, 1280).toInt();
     height = settings.value(SER_HEIGHT, 720).toInt();
     fps = settings.value(SER_FPS, 60).toInt();
+#ifdef Q_OS_DARWIN
+    // Auto is the default for new installs only: a saved fps (even 60, which
+    // every save writes) stays the user's choice
+    autoFps = settings.value(SER_AUTOFPS, !settings.contains(SER_FPS)).toBool();
+#else
+    autoFps = false;
+#endif
     enableYUV444 = settings.value(SER_YUV444, false).toBool();
     bitrateKbps = settings.value(SER_BITRATE, getDefaultBitrate(width, height, fps, enableYUV444)).toInt();
     unlockBitrate = settings.value(SER_UNLOCK_BITRATE, false).toBool();
@@ -520,6 +529,9 @@ void StreamingPreferences::save()
     settings.setValue(SER_WIDTH, width);
     settings.setValue(SER_HEIGHT, height);
     settings.setValue(SER_FPS, fps);
+#ifdef Q_OS_DARWIN
+    settings.setValue(SER_AUTOFPS, autoFps);
+#endif
     settings.setValue(SER_BITRATE, bitrateKbps);
     settings.setValue(SER_UNLOCK_BITRATE, unlockBitrate);
     settings.setValue(SER_AUTOADJUSTBITRATE, autoAdjustBitrate);
@@ -921,6 +933,16 @@ void StreamingPreferences::setMicrophoneMonitorStatus(const QString& status)
         m_MicrophoneMonitorStatus = status;
         emit microphoneMonitorStatusChanged();
     }
+}
+
+int StreamingPreferences::autoFrameRate(QWindow* window)
+{
+    return AutoFrameRate::forWindow(window);
+}
+
+int StreamingPreferences::autoFrameRateForRefreshRate(double hz)
+{
+    return AutoFrameRate::fromRefreshRate(hz);
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)

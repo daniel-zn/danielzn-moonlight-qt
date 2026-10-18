@@ -13,6 +13,7 @@
 #include "SDL_compat.h"
 
 class QTimer;
+class QWindow;
 
 class StreamingPreferences : public QObject
 {
@@ -27,6 +28,11 @@ public:
     getDefaultBitrate(int width, int height, int fps, bool yuv444);
 
     Q_INVOKABLE void save();
+
+    // Auto frame rate (macOS): the frame rate a session started from this window
+    // would ask for, and the rounding of a refresh rate (for probes).
+    Q_INVOKABLE static int autoFrameRate(QWindow* window);
+    Q_INVOKABLE static int autoFrameRateForRefreshRate(double hz);
 
     void reload();
 
@@ -134,6 +140,7 @@ public:
     Q_PROPERTY(int width MEMBER width NOTIFY displayModeChanged)
     Q_PROPERTY(int height MEMBER height NOTIFY displayModeChanged)
     Q_PROPERTY(int fps MEMBER fps NOTIFY displayModeChanged)
+    Q_PROPERTY(bool autoFps MEMBER autoFps NOTIFY displayModeChanged)
     Q_PROPERTY(int bitrateKbps MEMBER bitrateKbps NOTIFY bitrateChanged)
     Q_PROPERTY(bool unlockBitrate MEMBER unlockBitrate NOTIFY unlockBitrateChanged)
     Q_PROPERTY(bool autoAdjustBitrate MEMBER autoAdjustBitrate NOTIFY autoAdjustBitrateChanged)
@@ -194,6 +201,9 @@ public:
     int width;
     int height;
     int fps;
+    // macOS: each session asks for the refresh rate of the display the window
+    // is on instead of fps (which stays the fallback and the manual choice)
+    bool autoFps;
     int bitrateKbps;
     bool unlockBitrate;
     bool autoAdjustBitrate;

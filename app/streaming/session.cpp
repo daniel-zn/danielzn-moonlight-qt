@@ -1,5 +1,6 @@
 #include "session.h"
 #include "settings/streamingpreferences.h"
+#include "settings/autoframerate.h"
 #include "streaming/streamutils.h"
 #include "backend/richpresencemanager.h"
 #include "streaming/audio/capture/microphonecapture.h"
@@ -691,6 +692,27 @@ bool Session::initialize(QQuickWindow* qtWindow)
 
     m_StreamConfig.fps = m_Preferences->fps;
     m_StreamConfig.bitrate = m_Preferences->bitrateKbps;
+
+#ifdef Q_OS_DARWIN
+    // Auto frame rate: ask for the refresh rate of the display the window is on,
+    // where the stream window opens. It's read once per session (launch or resume):
+    // moving the stream to another display mid-session changes nothing until the
+    // next one. A bitrate left on its default follows the frame rate; a custom one stays.
+    if (m_Preferences->autoFps) {
+        m_StreamConfig.fps = AutoFrameRate::forWindow(m_QtWindow);
+        if (m_Preferences->autoAdjustBitrate) {
+            m_StreamConfig.bitrate = StreamingPreferences::getDefaultBitrate(m_StreamConfig.width,
+                                                                             m_StreamConfig.height,
+                                                                             m_StreamConfig.fps,
+                                                                             m_Preferences->enableYUV444);
+        }
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Auto frame rate: %d FPS for display '%s' (%.2f Hz)",
+                    m_StreamConfig.fps,
+                    m_QtWindow && m_QtWindow->screen() ? qPrintable(m_QtWindow->screen()->name()) : "?",
+                    AutoFrameRate::maximumRefreshRate(m_QtWindow ? m_QtWindow->screen() : nullptr));
+    }
+#endif
 
 #ifndef STEAM_LINK
     // Opt-in to all encryption features if we detect that the platform

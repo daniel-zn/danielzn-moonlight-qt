@@ -187,6 +187,7 @@ SOURCES += \
     settings/compatfetcher.cpp \
     settings/mappingfetcher.cpp \
     settings/streamingpreferences.cpp \
+    settings/autoframerate.cpp \
     streaming/input/abstouch.cpp \
     streaming/input/gamepad.cpp \
     streaming/input/input.cpp \
@@ -232,6 +233,7 @@ HEADERS += \
     cli/quitstream.h \
     cli/startstream.h \
     settings/streamingpreferences.h \
+    settings/autoframerate.h \
     streaming/input/input.h \
     streaming/session.h \
     streaming/audio/capture/microphonecapture.h \
@@ -435,6 +437,7 @@ macx {
         streaming/audio/capture/micpermission_mac.mm \
         streaming/quitduringstream.cpp \
         gui/nativechrome_mac.mm \
+        settings/autoframerate_mac.mm \
         streaming/video/ffmpeg-renderers/vt_base.mm \
         streaming/video/ffmpeg-renderers/vt_avsamplelayer.mm \
         streaming/video/ffmpeg-renderers/vt_metal.mm
