@@ -433,12 +433,14 @@ macx {
 
     SOURCES += \
         streaming/audio/capture/micpermission_mac.mm \
+        streaming/quitduringstream.cpp \
         gui/nativechrome_mac.mm \
         streaming/video/ffmpeg-renderers/vt_base.mm \
         streaming/video/ffmpeg-renderers/vt_avsamplelayer.mm \
         streaming/video/ffmpeg-renderers/vt_metal.mm
 
     HEADERS += \
+        streaming/quitduringstream.h \
         streaming/video/ffmpeg-renderers/vt.h
 }
 discord-rpc {

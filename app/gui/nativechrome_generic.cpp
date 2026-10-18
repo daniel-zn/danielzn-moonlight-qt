@@ -55,6 +55,35 @@ QString NativeChrome::symbol(const QString&, const QColor&) const
     return QString();
 }
 
+void NativeChrome::setInterfaceFontData(const QByteArray&)
+{
+}
+
+void NativeChrome::useInterfaceFontForTitle(void*)
+{
+}
+
+void NativeChrome::useInterfaceFontForTitle(QWindow*)
+{
+}
+
+void NativeChrome::setQuitEndsSession(bool)
+{
+}
+
+bool NativeChrome::isQuitFromOutside()
+{
+    return false;
+}
+
+void NativeChrome::triggerQuitMenuItem()
+{
+}
+
+void NativeChrome::sendQuitAppleEvent()
+{
+}
+
 void NativeChrome::updateToolbar()
 {
 }

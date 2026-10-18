@@ -1,11 +1,13 @@
 #pragma once
 
 #include <QFile>
+#include <QList>
 #include <QObject>
 #include <QString>
 
 class QQmlApplicationEngine;
 class QQuickWindow;
+class QWindow;
 
 // Self-test hook for UI checks without a person at the screen. Only built into test
 // builds (qmake CONFIG+=ui_probe), and it does nothing unless MOONLIGHT_UI_PROBE names a
@@ -28,11 +30,22 @@ public:
     Q_INVOKABLE void log(const QString& line);
     // Ends the run: the app quits with this exit code
     Q_INVOKABLE void finish(int exitCode);
+    // macOS: acts as if a stream were running, as far as quitting goes (the quit handling a
+    // session installs, with a stand-in for the session's teardown that logs what it was
+    // asked to do; asked to quit Artemis too, it then quits as the session's cleanup does)
+    Q_INVOKABLE void simulateStream(bool active);
+    Q_INVOKABLE bool streamActive() const { return m_StreamQuit != nullptr; }
+    // Opens a plain titled window without a toolbar, its title in the interface font as the
+    // stream window's is when windowed; closeWindows() closes those
+    Q_INVOKABLE void openPlainWindow(const QString& title);
+    Q_INVOKABLE void closeWindows();
 
 private:
     UiProbe(QQuickWindow* window, const QString& outDir);
 
     QQuickWindow* m_Window;
+    QObject* m_StreamQuit = nullptr;
+    QList<QWindow*> m_Windows;
     QString m_OutDir;
     QFile m_Log;
 };

@@ -873,6 +873,8 @@ int main(int argc, char *argv[])
     QByteArray orbixData = orbix.open(QIODevice::ReadOnly) ? orbix.readAll() : QByteArray();
     QByteArray orbixLetters = fontDataWithoutDigits(orbixData);
     if (QFontDatabase::addApplicationFontFromData(orbixLetters.isEmpty() ? orbixData : orbixLetters) >= 0) {
+        // The same font for the window titles AppKit draws
+        NativeChrome::setInterfaceFontData(orbixLetters.isEmpty() ? orbixData : orbixLetters);
         QFont font = app.font();
         font.setFamilies({"Orbix", font.family()});
         app.setFont(font);

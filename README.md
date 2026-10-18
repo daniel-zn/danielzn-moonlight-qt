@@ -37,8 +37,10 @@ the Moonlight project, or by the Artemis Android client. The Windows and Linux b
   with its license, bundled in `Artemis.app/Contents/Resources/fonts`). Digits come from the system font, as in the
   iPhone app (Orbix's 1 reads as a 7): the app registers a copy of the font, in memory only, whose character map
   leaves out 0–9. Characters Orbix doesn't have (`:` `;` `(` `)` `+` `%` `…` and other symbols) come from the system
-  font too. The menu bar, the toolbar, right-click menus, the
-  About panel, permission prompts and the stream's statistics overlay keep the system's fonts.
+  font too. Window titles (Computers, Settings, a PC's name, and a session's window when it isn't full screen) are
+  Orbix as well: the app hides AppKit's title and draws its own in the same place. The menu bar, the toolbar
+  buttons, right-click menus, the About panel, permission prompts and the stream's statistics overlay keep the
+  system's fonts.
 
 What it adds on top of upstream Moonlight:
 
@@ -65,7 +67,9 @@ What it adds on top of upstream Moonlight:
   - Settings laid out like System Settings: a sidebar of sections (Video & Display, Audio & Microphone,
     Keyboard & Mouse, Controllers, Host PC, General, Advanced), one section at a time.
     The window grows while Settings is open and returns to its size afterwards.
-  - ⌘Q (or Dock ▸ Quit) during a stream ends the stream cleanly and then quits the app.
+  - ⌘Q during a session disconnects and brings back the Artemis window, like closing the session's window; the
+    app menu's Quit item reads Disconnect meanwhile. Dock ▸ Quit, logout and shutdown end the session and quit
+    the app. Neither ends the app on the PC (Apollo keeps its virtual display).
   - Mac app conventions: the window reopens where you left it, About Artemis and Settings… are in the
     app menu, a Window menu has Minimize (⌘M) and Zoom, and pairing shows the PIN large.
 - **Build changes:**
@@ -74,7 +78,8 @@ What it adds on top of upstream Moonlight:
     and quit, so the macOS UI can be checked without anyone at the screen.
   - `moonlight-common-c` (with the microphone protocol) is included directly instead of as a submodule.
   - macOS: a microphone usage description and audio-input entitlement. DMGs built without a signing identity are
-    ad-hoc signed as a whole, so macOS can remember the microphone and Local Network permissions.
+    ad-hoc signed as a whole, so macOS can remember the microphone and Local Network permissions. Released DMGs are
+    signed with a Developer ID (hardened runtime), notarized and stapled.
 
 The microphone protocol isn't compatible with other microphone forks (logabell's, ApolloVibe, moonlight-mic).
 

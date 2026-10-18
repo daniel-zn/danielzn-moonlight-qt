@@ -1,11 +1,13 @@
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 
 class QQuickWindow;
 class QQmlEngine;
+class QWindow;
 
 // Native window chrome for platforms that have it (macOS): a system toolbar
 // with SF Symbol buttons and a translucent Liquid Glass window background.
@@ -65,6 +67,28 @@ public:
 
     // Image URL for an SF Symbol drawn in the given color, for Image.source
     Q_INVOKABLE QString symbol(const QString& name, const QColor& color) const;
+
+    // The interface font's data (Orbix without its digits, as main.cpp gives Qt), for the
+    // window titles AppKit would otherwise draw in the system font. Call before attach().
+    static void setInterfaceFontData(const QByteArray& data);
+
+    // Shows a window's title in the interface font: for a plain window without NativeChrome's
+    // toolbar (the stream window). Takes an NSWindow*.
+    static void useInterfaceFontForTitle(void* nativeWindow);
+    static void useInterfaceFontForTitle(QWindow* window);
+
+    // While a stream runs, Cmd+Q ends only the session: the app menu's Quit item reads
+    // Disconnect meanwhile (Artemis wording: the app on the PC keeps running)
+    static void setQuitEndsSession(bool endsSession);
+
+    // Whether the quit being handled came from outside the app (Dock > Quit, logout,
+    // restart, shutdown) rather than from Cmd+Q or the app menu
+    static bool isQuitFromOutside();
+
+    // For UI self-tests: chooses the app menu's Quit item as a click would, or sends this
+    // app the Quit Apple Event that Dock > Quit sends
+    Q_INVOKABLE void triggerQuitMenuItem();
+    Q_INVOKABLE void sendQuitAppleEvent();
 
 signals:
     void canGoBackChanged();

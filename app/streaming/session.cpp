@@ -32,6 +32,12 @@
 
 #include <openssl/rand.h>
 
+#ifdef Q_OS_DARWIN
+#include <SDL_syswm.h>
+#include "streaming/quitduringstream.h"
+#include "gui/nativechrome.h"
+#endif
+
 #include <QtEndian>
 #include <QCoreApplication>
 #include <QEvent>
@@ -1811,55 +1817,6 @@ void Session::destroyMicrophoneCapture()
     }
 }
 
-#ifdef Q_OS_DARWIN
-// While streaming, the SDL loop below owns the main thread, so a quit request from
-// macOS (Cmd+Q, Dock > Quit) would sit in Qt's queue until the stream ended on its
-// own. Catch it and end the stream instead; the cleanup task then quits Moonlight.
-// Quitting Moonlight only disconnects: the game on the host keeps running (and Apollo
-// keeps its virtual display), even with "quit app on host after streaming" on.
-// Declining the immediate quit means a logout or shutdown started mid-stream is
-// cancelled once, while Moonlight exits.
-class QuitDuringStreamFilter : public QObject
-{
-public:
-    QuitDuringStreamFilter(Session* session) : m_Session(session)
-    {
-        QCoreApplication::instance()->installEventFilter(this);
-    }
-
-    ~QuitDuringStreamFilter() override
-    {
-        QCoreApplication::instance()->removeEventFilter(this);
-    }
-
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override
-    {
-        if (watched == QCoreApplication::instance() && event->type() == QEvent::Quit) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "App quit requested while streaming");
-
-            // Quit Moonlight afterwards, but leave the host's app running
-            m_Session->m_LeaveHostAppRunning = true;
-            m_Session->setShouldExit(false);
-
-            SDL_Event quitEvent;
-            quitEvent.type = SDL_QUIT;
-            quitEvent.quit.timestamp = SDL_GetTicks();
-            SDL_PushEvent(&quitEvent);
-
-            // Decline the immediate termination: the stream shuts down cleanly first
-            event->ignore();
-            return true;
-        }
-        return false;
-    }
-
-private:
-    Session* m_Session;
-};
-#endif
-
 void Session::exec()
 {
     // If the connection failed, clean up and abort the connection.
@@ -1977,6 +1934,17 @@ void Session::exec()
 
     m_InputHandler->setWindow(m_Window);
 
+#ifdef Q_OS_DARWIN
+    // The title of a windowed stream in the interface font, like Artemis' own window
+    {
+        SDL_SysWMinfo info;
+        SDL_VERSION(&info.version);
+        if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_COCOA) {
+            NativeChrome::useInterfaceFontForTitle((void*)info.info.cocoa.window);
+        }
+    }
+#endif
+
     QSvgRenderer svgIconRenderer(QString(":/res/moonlight.svg"));
     QImage svgImage(ICON_SIZE, ICON_SIZE, QImage::Format_RGBA8888);
     svgImage.fill(0);
@@ -2054,8 +2022,20 @@ void Session::exec()
     RichPresenceManager presence(*m_Preferences, m_App.name);
 
 #ifdef Q_OS_DARWIN
-    // Cmd+Q while streaming ends the stream and then quits Moonlight
-    std::unique_ptr<QuitDuringStreamFilter> quitFilter(new QuitDuringStreamFilter(this));
+    // Cmd+Q while streaming ends just the session; a quit from outside (Dock > Quit,
+    // logout) also quits Artemis afterwards. Neither quits the host's app (Apollo keeps
+    // its virtual display), even with "quit app on host after streaming" on.
+    std::unique_ptr<QuitDuringStream> quitFilter(new QuitDuringStream([this](bool quitArtemis) {
+        m_LeaveHostAppRunning = true;
+        if (quitArtemis) {
+            setShouldExit(false);
+        }
+
+        SDL_Event quitEvent;
+        quitEvent.type = SDL_QUIT;
+        quitEvent.quit.timestamp = SDL_GetTicks();
+        SDL_PushEvent(&quitEvent);
+    }));
 #endif
 
     // Toggle the stats overlay if requested by the user
@@ -2413,7 +2393,7 @@ void Session::exec()
 
 DispatchDeferredCleanup:
 #ifdef Q_OS_DARWIN
-    // The stream is ending; from here on a quit is Moonlight's own (or a normal one)
+    // The stream is ending; from here on Cmd+Q quits Artemis as usual
     quitFilter.reset();
 #endif
 
