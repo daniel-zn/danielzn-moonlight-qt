@@ -72,9 +72,12 @@ static NSFont* titleFont()
         self.cell.usesSingleLineMode = YES;
         self.accessibilityElement = NO;  // The window's title already says it
         self.translatesAutoresizingMaskIntoConstraints = NO;
-        // Shrinks (truncating) before anything else in the title bar does
-        [self setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow - 1
+        // Shrinks (truncating) before anything else in the title bar does. The toolbar sizes
+        // items at their fitting size, so the resistance has to be below that priority, or a
+        // long title would push itself and the buttons into the overflow menu.
+        [self setContentCompressionResistancePriority:NSLayoutPriorityFittingSizeCompression - 49
                                        forOrientation:NSLayoutConstraintOrientationHorizontal];
+        [self.widthAnchor constraintGreaterThanOrEqualToConstant:40].active = YES;
         [self setContentHuggingPriority:NSLayoutPriorityDefaultHigh forOrientation:NSLayoutConstraintOrientationHorizontal];
         [self updateActiveState];
     }
