@@ -405,7 +405,8 @@ CenteredGridView {
                     onTriggered: launchOrResumeSelectedApp(true)
                 }
                 NavigableMenuItem {
-                    text: qsTr("Quit Game")
+                    // It asks first, so on macOS the item ends in an ellipsis
+                    text: qsTr("Quit Game") + (NativeChrome.enabled ? "…" : "")
                     onTriggered: doQuitGame()
                     visible: model.running
                 }
@@ -486,7 +487,9 @@ CenteredGridView {
         property bool segueToStream : false
         property string nextAppName: ""
         property int nextAppIndex: 0
-        text:qsTr("Are you sure you want to quit %1? Any unsaved progress will be lost.").arg(appName)
+        // The macOS wording also names the PC (%2, the page's title)
+        readonly property string question: qsTr("Are you sure you want to quit %1? Any unsaved progress will be lost.").arg(appName)
+        text: question.indexOf("%2") >= 0 ? question.arg(appGrid.objectName) : question
         standardButtons: Dialog.Yes | Dialog.No
         acceptText: NativeChrome.enabled ? qsTr("Quit Game") : ""
         rejectText: NativeChrome.enabled ? qsTr("Cancel") : ""
