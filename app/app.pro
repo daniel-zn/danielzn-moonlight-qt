@@ -595,7 +595,9 @@ macx {
 
     # Create Info.plist in object dir with the version and build number
     system(cp $$PWD/Info.plist $$OUT_PWD/Info.plist)
-    system(sed -i -e 's/@ARTEMIS_VERSION@/$$ARTEMIS_VERSION/g; s/@ARTEMIS_BUILD@/$$ARTEMIS_BUILD/g' $$OUT_PWD/Info.plist)
+    # qmake drops quotes inside system(), so plain -e expressions
+    system(sed -i.orig -e s/@ARTEMIS_VERSION@/$$ARTEMIS_VERSION/g -e s/@ARTEMIS_BUILD@/$$ARTEMIS_BUILD/g $$OUT_PWD/Info.plist)
+    system(rm -f $$OUT_PWD/Info.plist.orig)
 
     QMAKE_INFO_PLIST = $$OUT_PWD/Info.plist
 
