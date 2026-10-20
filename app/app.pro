@@ -585,9 +585,17 @@ win32 {
     QMAKE_LFLAGS += /MANIFEST:embed /MANIFESTINPUT:$${PWD}/Moonlight.exe.manifest
 }
 macx {
-    # Create Info.plist in object dir with the correct version string
+    # Artemis's own version on macOS: version-artemis.txt, and the build number is the commit
+    # count of the commit being built. version.txt stays upstream's (Windows/Linux packaging and
+    # their update check use it; nothing in the streaming protocol does).
+    ARTEMIS_VERSION = $$cat(version-artemis.txt)
+    ARTEMIS_BUILD = $$system(git -C $$shell_quote($$PWD) rev-list --count HEAD 2>/dev/null)
+    isEmpty(ARTEMIS_BUILD): ARTEMIS_BUILD = 0
+    DEFINES += ARTEMIS_VERSION_STR=\\\"$$ARTEMIS_VERSION\\\" ARTEMIS_BUILD_STR=\\\"$$ARTEMIS_BUILD\\\"
+
+    # Create Info.plist in object dir with the version and build number
     system(cp $$PWD/Info.plist $$OUT_PWD/Info.plist)
-    system(sed -i -e 's/VERSION/$$cat(version.txt)/g' $$OUT_PWD/Info.plist)
+    system(sed -i -e 's/@ARTEMIS_VERSION@/$$ARTEMIS_VERSION/g; s/@ARTEMIS_BUILD@/$$ARTEMIS_BUILD/g' $$OUT_PWD/Info.plist)
 
     QMAKE_INFO_PLIST = $$OUT_PWD/Info.plist
 

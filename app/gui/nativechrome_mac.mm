@@ -505,7 +505,14 @@ void NativeChrome::setRememberWindowFrame(QQuickWindow* window, bool remember)
 
 void NativeChrome::showAboutPanel()
 {
-    [NSApp orderFrontStandardAboutPanel:nil];
+    // "Version 1.0 (build N)": Artemis's version and the build number from Info.plist
+    NSDictionary* info = NSBundle.mainBundle.infoDictionary;
+    NSString* version = [NSString stringWithFormat:@"%@ (build %@)",
+                         info[@"CFBundleShortVersionString"], info[@"CFBundleVersion"]];
+    [NSApp orderFrontStandardAboutPanelWithOptions:@{
+        NSAboutPanelOptionApplicationVersion: version,
+        NSAboutPanelOptionVersion: @"",
+    }];
     if (@available(macOS 14.0, *)) {
         [NSApp activate];
     }

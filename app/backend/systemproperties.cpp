@@ -46,7 +46,12 @@ private:
 
 SystemProperties::SystemProperties()
 {
+#ifdef Q_OS_DARWIN
+    // Artemis's own version, not upstream Moonlight's
+    versionString = QStringLiteral(ARTEMIS_VERSION_STR " (build " ARTEMIS_BUILD_STR ")");
+#else
     versionString = QString(VERSION_STR);
+#endif
     hasDesktopEnvironment = WMUtils::isRunningDesktopEnvironment();
     isRunningWayland = WMUtils::isRunningWayland();
     isRunningXWayland = isRunningWayland && QGuiApplication::platformName() == "xcb";

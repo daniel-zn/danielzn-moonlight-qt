@@ -53,9 +53,9 @@
 		<string>_nvstream._tcp</string>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>VERSION</string>
+	<string>@ARTEMIS_BUILD@</string>
 	<key>CFBundleShortVersionString</key>
-	<string>VERSION</string>
+	<string>@ARTEMIS_VERSION@</string>
 	<key>CFBundleDisplayName</key>
 	<string>Artemis</string>
     <key>LSApplicationCategoryType</key>
