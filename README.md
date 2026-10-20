@@ -23,8 +23,15 @@ the Moonlight project, or by the Artemis Android client. The Windows and Linux b
 
 - Updating from the Moonlight-named Mac build keeps everything: the bundle identifier stays
   `com.moonlight-stream.Moonlight` and the settings names stay those of Moonlight, so saved PCs, pairing certificates,
-  settings, the window position and the microphone and Local Network permissions carry over. Delete the old
-  `Moonlight.app` after installing `Artemis.app`: with the same bundle identifier, macOS may open the old app instead.
+  settings and the window position carry over. Delete the old `Moonlight.app` after installing `Artemis.app`: with
+  the same bundle identifier, macOS may open the old app instead.
+- **The signature changed in October 2026, so macOS may need the microphone allowed again.** Builds before
+  2026-10-17 were signed with an Apple Development certificate; releases since are Developer ID signed. macOS
+  remembers microphone permission per signature, so the first time the new app uses the microphone macOS asks
+  again (Local Network access too). If System Settings > Privacy & Security > Microphone shows Artemis switched on
+  but Artemis says macOS blocks it, the switch belongs to the old signature: switch it off and on, or reset it in
+  Terminal with `tccutil reset Microphone com.moonlight-stream.Moonlight`, then reopen Artemis and allow the
+  microphone. (Artemis can't reset it itself: macOS keeps the old answer for a running app until it restarts.)
 - The interface strings keep saying Moonlight in the source, so every translation still matches; on macOS a
   translator (`settings/streamingpreferences.cpp`) puts Artemis in their place. Names of upstream resources stay:
   the Help menu's Moonlight Setup Guide (it opens Moonlight's wiki), "the Moonlight help" and the Moonlight Internet
@@ -51,7 +58,13 @@ What it adds on top of upstream Moonlight:
     The host advertises support with `a=x-apollo-mic:2`, so normal streaming to any other host is unaffected.
   - Settings > Audio Settings (Audio & Microphone on macOS): **Enable microphone streaming**, the input device, **Noise suppression**
     (macOS only: RNNoise plus a gate that mutes between words), and **Test microphone** with a level meter.
-  - On macOS, turning the microphone on asks for microphone permission once.
+  - On macOS, turning the microphone on, **Test microphone** or a session with the microphone on asks for
+    microphone permission (macOS's own prompt) if you haven't decided yet. If macOS blocks the microphone, a
+    native alert says so, with **Open Privacy Settings** and **Cancel**. If the microphone can't be opened or
+    sends only digital silence (a muted or unused input, or macOS blocking it), another alert says so, with
+    **Open Privacy Settings**, **Open Sound Settings** and **Cancel**. They appear when you turn the microphone
+    on or test it, and at most once per launch for sessions (before the session connects; for silence, after the
+    session's window closes).
 - **Native macOS look** (macOS only; Windows and Linux keep upstream's Material look, apart from tooltips now
   wrapping at 400 px as upstream intended):
   - A native toolbar with SF Symbols in the title bar, drawn on Liquid Glass on macOS 26 and later.

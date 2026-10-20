@@ -18,6 +18,8 @@ MicrophoneCapture::MicrophoneCapture(QObject* parent)
     , m_Enabled(false)
     , m_FirstPacketLogged(false)
     , m_NoiseSuppression(false)
+    , m_CapturedSamples(0)
+    , m_HeardSignal(false)
 {
 }
 
@@ -179,6 +181,12 @@ void MicrophoneCapture::stop()
     m_BufferCondition.notify_all();
 }
 
+bool MicrophoneCapture::heardOnlySilence() const
+{
+    return !m_HeardSignal.load(std::memory_order_relaxed) &&
+           m_CapturedSamples.load(std::memory_order_relaxed) >= (int64_t)kSampleRate * kChannels * 3;
+}
+
 void MicrophoneCapture::setNoiseSuppression(bool enabled)
 {
     m_NoiseSuppression = enabled;
@@ -208,6 +216,12 @@ void MicrophoneCapture::handleAudioData(const Uint8* stream, int len)
 
     const auto* inputSamples = reinterpret_cast<const opus_int16*>(stream);
     const int sampleCount = len / (int)sizeof(opus_int16);
+
+    m_CapturedSamples.fetch_add(sampleCount, std::memory_order_relaxed);
+    if (!m_HeardSignal.load(std::memory_order_relaxed) &&
+            std::any_of(inputSamples, inputSamples + sampleCount, [](opus_int16 sample) { return sample != 0; })) {
+        m_HeardSignal.store(true, std::memory_order_relaxed);
+    }
 
     {
         std::lock_guard lock(m_BufferMutex);

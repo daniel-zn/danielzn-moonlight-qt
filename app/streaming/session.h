@@ -148,6 +148,9 @@ signals:
 private:
     void exec();
 
+    // Connects and streams (start() first settles the microphone permission on macOS)
+    void startConnection();
+
     bool startConnectionAsync();
 
     bool validateLaunch(SDL_Window* testWindow);

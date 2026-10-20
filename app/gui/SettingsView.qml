@@ -1229,10 +1229,14 @@ Flickable {
                     checked: StreamingPreferences.enableMicrophone
                     onCheckedChanged: {
                         StreamingPreferences.enableMicrophone = checked
+                        StreamingPreferences.refreshMicrophoneMonitor()
+                    }
+                    // Only when the user turns it on (not each time Settings opens): macOS's
+                    // prompt, or why macOS blocks the microphone
+                    onToggled: {
                         if (checked) {
                             StreamingPreferences.requestMicrophonePermission()
                         }
-                        StreamingPreferences.refreshMicrophoneMonitor()
                     }
 
                     ToolTip.delay: 1000

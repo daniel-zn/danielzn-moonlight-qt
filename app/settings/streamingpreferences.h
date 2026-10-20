@@ -312,6 +312,8 @@ private:
     std::vector<int16_t> m_MicrophoneMonitorPending;
     std::atomic<int> m_MicrophoneCallbackCount;  // Audio callbacks since the test opened the device
     bool m_MicrophoneSignalEverSeen;
+    std::atomic_bool m_MicrophoneRawSignalSeen;  // Any non-zero sample before noise suppression
+    bool m_MicrophoneSilenceExplained;
     qint64 m_MicrophoneMonitorStartMs;
     QString m_MicrophoneMonitorDeviceLabel;
     double m_MicrophoneMonitorLevel;

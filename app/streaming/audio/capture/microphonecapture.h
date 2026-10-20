@@ -31,6 +31,10 @@ public:
     // Call before initialize()
     void setNoiseSuppression(bool enabled);
 
+    // True when at least 3 seconds were captured and every sample was exactly zero:
+    // how macOS hands over a microphone it blocks
+    bool heardOnlySilence() const;
+
 private:
     static void audioCallback(void* userdata, Uint8* stream, int len);
     void handleAudioData(const Uint8* stream, int len);
@@ -50,6 +54,8 @@ private:
     bool m_Enabled;
     bool m_FirstPacketLogged;
     bool m_NoiseSuppression;
+    std::atomic<int64_t> m_CapturedSamples;  // Since the device opened, before noise suppression
+    std::atomic_bool m_HeardSignal;
     std::unique_ptr<MicNoiseFilter> m_NoiseFilter;  // Encoder thread only
     std::mutex m_BufferMutex;
     std::condition_variable m_BufferCondition;

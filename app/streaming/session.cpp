@@ -4,6 +4,7 @@
 #include "streaming/streamutils.h"
 #include "backend/richpresencemanager.h"
 #include "streaming/audio/capture/microphonecapture.h"
+#include "streaming/audio/capture/micpermission.h"
 
 #include <Limelight.h>
 #include "SDL_compat.h"
@@ -44,6 +45,7 @@
 #include <QEvent>
 #include <memory>
 #include <QThreadPool>
+#include <QTimer>
 #include <QSvgRenderer>
 #include <QPainter>
 #include <QImage>
@@ -1783,6 +1785,34 @@ void Session::setShouldExit(bool quitHostApp)
 
 void Session::start()
 {
+#ifdef Q_OS_DARWIN
+    // Settle the microphone before connecting, while the user can still answer: macOS's
+    // prompt if they haven't decided, or (once per run, so it doesn't nag every session)
+    // that macOS blocks it. The session goes on either way, with or without the microphone.
+    if (m_Preferences->enableMicrophone) {
+        static bool explainedDenied = false;
+        switch (MicPermission::status()) {
+        case MicPermission::Status::Granted:
+            break;
+        case MicPermission::Status::Undetermined:
+            MicPermission::request(this, [this](bool) { startConnection(); });
+            return;
+        case MicPermission::Status::Denied:
+            if (!explainedDenied) {
+                explainedDenied = true;
+                MicPermission::explain(MicPermission::Problem::Denied, QString(), [this] { startConnection(); });
+                return;
+            }
+            break;
+        }
+    }
+#endif
+
+    startConnection();
+}
+
+void Session::startConnection()
+{
     // Wait for any old session to finish cleanup
     s_ActiveSessionSemaphore.acquire();
 
@@ -1833,6 +1863,25 @@ bool Session::initializeMicrophoneCapture()
 void Session::destroyMicrophoneCapture()
 {
     if (m_MicrophoneCapture != nullptr) {
+#ifdef Q_OS_DARWIN
+        // A microphone that sent only digital silence the whole session (muted, the wrong
+        // input, or blocked by macOS) is explained once the stream window is gone, once per run,
+        // rather than sending silence without a word
+        static bool explainedSilence = false;
+        if (m_MicrophoneCapture->heardOnlySilence()) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "The microphone delivered only silence for the whole session");
+            if (!explainedSilence) {
+                explainedSilence = true;
+                const QString device = m_Preferences->microphoneDevice.isEmpty() ?
+                                           tr("the system default input") : m_Preferences->microphoneDevice;
+                QTimer::singleShot(500, qApp, [device] {
+                    MicPermission::explain(MicPermission::Problem::NoSound,
+                                           tr("%1 sent only silence during the session.").arg(device));
+                });
+            }
+        }
+#endif
         m_MicrophoneCapture->stop();
         delete m_MicrophoneCapture;
         m_MicrophoneCapture = nullptr;

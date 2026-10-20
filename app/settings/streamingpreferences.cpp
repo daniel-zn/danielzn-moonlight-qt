@@ -17,6 +17,8 @@
 
 #include <QtDebug>
 
+#include <algorithm>
+
 #define SER_STREAMSETTINGS "streamsettings"
 #define SER_WIDTH "width"
 #define SER_HEIGHT "height"
@@ -227,6 +229,8 @@ StreamingPreferences::StreamingPreferences(QQmlEngine *qmlEngine)
     , m_PendingMicrophonePeak(0)
     , m_MicrophoneCallbackCount(0)
     , m_MicrophoneSignalEverSeen(false)
+    , m_MicrophoneRawSignalSeen(false)
+    , m_MicrophoneSilenceExplained(false)
     , m_MicrophoneMonitorStartMs(0)
     , m_MicrophoneMonitorLevel(0.0)
     , m_MicrophoneMonitorActive(false)
@@ -656,7 +660,9 @@ void StreamingPreferences::requestMicrophonePermission()
     case MicPermission::Status::Granted:
         return;
     case MicPermission::Status::Denied:
+        // The user just turned the microphone on: say why it won't work, and how to fix it
         setMicrophoneMonitorStatus(kMicrophoneDeniedText());
+        MicPermission::explain(MicPermission::Problem::Denied);
         return;
     case MicPermission::Status::Undetermined:
         if (!m_MicrophonePermissionRequestPending) {
@@ -710,24 +716,6 @@ bool StreamingPreferences::startMicrophoneMonitor()
         return false;
     }
 
-    switch (MicPermission::status()) {
-    case MicPermission::Status::Granted:
-        break;
-    case MicPermission::Status::Denied:
-        setMicrophoneMonitorStatus(kMicrophoneDeniedText());
-        return false;
-    case MicPermission::Status::Undetermined:
-        setMicrophoneMonitorStatus(tr("Waiting for microphone permission"));
-        if (!m_MicrophonePermissionRequestPending) {
-            m_MicrophonePermissionRequestPending = true;
-            MicPermission::request(this, [this](bool) {
-                m_MicrophonePermissionRequestPending = false;
-                refreshMicrophoneMonitor();
-            });
-        }
-        return false;
-    }
-
     // A hard failure ends the test, so the button doesn't keep saying it's running
     auto failTest = [this](const QString& status) {
         stopMicrophoneMonitor(status);
@@ -737,6 +725,34 @@ bool StreamingPreferences::startMicrophoneMonitor()
         }
         return false;
     };
+
+    qInfo() << "Microphone permission:" << (MicPermission::status() == MicPermission::Status::Granted ? "granted" :
+                                            MicPermission::status() == MicPermission::Status::Denied ? "denied" : "not determined");
+    switch (MicPermission::status()) {
+    case MicPermission::Status::Granted:
+        break;
+    case MicPermission::Status::Denied:
+        // The test ends, so only another press of Test microphone explains it again
+        failTest(kMicrophoneDeniedText());
+        MicPermission::explain(MicPermission::Problem::Denied);
+        return false;
+    case MicPermission::Status::Undetermined:
+        setMicrophoneMonitorStatus(tr("Waiting for microphone permission"));
+        if (!m_MicrophonePermissionRequestPending) {
+            m_MicrophonePermissionRequestPending = true;
+            MicPermission::request(this, [this, failTest](bool granted) {
+                m_MicrophonePermissionRequestPending = false;
+                if (granted) {
+                    refreshMicrophoneMonitor();
+                }
+                else {
+                    // They just said no: no alert on top of that
+                    failTest(kMicrophoneDeniedText());
+                }
+            });
+        }
+        return false;
+    }
 
     // Hold a reference on SDL audio only while the test runs (stopMicrophoneMonitor drops it)
     if (!m_MicrophoneMonitorHoldsAudio) {
@@ -768,7 +784,12 @@ bool StreamingPreferences::startMicrophoneMonitor()
 
     if (m_MicrophoneMonitorDeviceId == 0) {
         qWarning() << "Microphone test couldn't open" << microphoneDevice << ":" << SDL_GetError();
-        return failTest(tr("Couldn't open the microphone: %1").arg(QString::fromUtf8(SDL_GetError())));
+        const QString error = QString::fromUtf8(SDL_GetError());
+        failTest(tr("Couldn't open the microphone: %1").arg(error));
+        MicPermission::explain(MicPermission::Problem::NoSound,
+                               tr("Moonlight couldn't open %1 (%2).")
+                                   .arg(microphoneDevice.isEmpty() ? tr("the system default input") : microphoneDevice, error));
+        return false;
     }
 
     if (m_MicrophoneMonitorSpec.freq != desired.freq ||
@@ -790,6 +811,8 @@ bool StreamingPreferences::startMicrophoneMonitor()
     m_MicrophoneMonitorDeviceLabel = (selectedDevice == nullptr || fellBackToDefault) ?
                                          tr("the system default input") : microphoneDevice;
     m_MicrophoneCallbackCount.store(0, std::memory_order_release);
+    m_MicrophoneRawSignalSeen.store(false, std::memory_order_release);
+    m_MicrophoneSilenceExplained = false;
     m_MicrophoneSignalEverSeen = false;
     m_MicrophoneMonitorStartMs = QDateTime::currentMSecsSinceEpoch();
 
@@ -856,6 +879,11 @@ void StreamingPreferences::processMicrophoneMonitorData(const Uint8* stream, int
 
     const auto* samples = reinterpret_cast<const qint16*>(stream);
     const int sampleCount = len / static_cast<int>(sizeof(qint16));
+    // Exact zeros before noise suppression: what macOS delivers from a microphone it blocks
+    if (!m_MicrophoneRawSignalSeen.load(std::memory_order_relaxed) &&
+            std::any_of(samples, samples + sampleCount, [](qint16 sample) { return sample != 0; })) {
+        m_MicrophoneRawSignalSeen.store(true, std::memory_order_release);
+    }
     int peak = 0;
     auto measure = [&peak](const qint16* block, int count) {
         for (int i = 0; i < count; ++i) {
@@ -911,15 +939,30 @@ void StreamingPreferences::updateMicrophoneMonitorState()
 
     // Explain the two ways a test can stay flat
     const qint64 elapsed = QDateTime::currentMSecsSinceEpoch() - m_MicrophoneMonitorStartMs;
+#ifdef Q_OS_DARWIN
+    if (!m_MicrophoneRawSignalSeen.load(std::memory_order_acquire) && elapsed > 3000 &&
+            m_MicrophoneCallbackCount.load(std::memory_order_acquire) > 0 && !m_MicrophoneSilenceExplained) {
+        // Only digital silence (not even the noise floor): a muted or unused input, or
+        // macOS blocking the microphone. End the test and say so.
+        m_MicrophoneSilenceExplained = true;
+        qWarning() << "Microphone test: only digital silence after" << elapsed << "ms";
+        QString status = tr("%1 is only sending silence. Check that it's the right input and isn't muted.").arg(m_MicrophoneMonitorDeviceLabel);
+        status[0] = status[0].toUpper();
+        stopMicrophoneMonitor(status);
+        if (m_MicrophoneMonitorActive) {
+            m_MicrophoneMonitorActive = false;
+            emit microphoneTestRunningChanged();
+        }
+        MicPermission::explain(MicPermission::Problem::NoSound,
+                               tr("%1 is sending only silence.").arg(m_MicrophoneMonitorDeviceLabel));
+        return;
+    }
+#endif
     if (!m_MicrophoneSignalEverSeen && elapsed > 3000) {
         const int callbacks = m_MicrophoneCallbackCount.load(std::memory_order_acquire);
         const QString status = callbacks == 0 ?
             tr("No audio is arriving from %1. Check that it's connected, or pick another input.").arg(m_MicrophoneMonitorDeviceLabel) :
-#ifdef Q_OS_DARWIN
-            tr("%1 is only sending silence. If other apps hear it, macOS is probably blocking Moonlight: turn it on in System Settings > Privacy & Security > Microphone.").arg(m_MicrophoneMonitorDeviceLabel);
-#else
             tr("%1 is only sending silence. Check that it isn't muted.").arg(m_MicrophoneMonitorDeviceLabel);
-#endif
         if (status != m_MicrophoneMonitorStatus) {
             qWarning() << "Microphone test:" << callbacks << "callbacks, all silent, after" << elapsed << "ms";
             setMicrophoneMonitorStatus(status);
