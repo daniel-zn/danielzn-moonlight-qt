@@ -163,7 +163,7 @@ macx {
         CONFIG += discord-rpc libplacebo
     }
 
-    LIBS += -lobjc -framework VideoToolbox -framework AVFoundation -framework CoreVideo -framework CoreGraphics -framework CoreMedia -framework AppKit -framework Metal -framework QuartzCore
+    LIBS += -lobjc -framework VideoToolbox -framework AVFoundation -framework CoreVideo -framework CoreGraphics -framework CoreMedia -framework CoreAudio -framework AppKit -framework Metal -framework QuartzCore
     CONFIG += ffmpeg
 }
 
@@ -197,6 +197,7 @@ SOURCES += \
     streaming/session.cpp \
     streaming/audio/audio.cpp \
     streaming/audio/capture/microphonecapture.cpp \
+    streaming/audio/capture/micinput.cpp \
     streaming/audio/capture/micnoisefilter.cpp \
     gui/nativechrome.cpp \
     streaming/audio/renderers/sdlaud.cpp \
@@ -237,6 +238,7 @@ HEADERS += \
     streaming/input/input.h \
     streaming/session.h \
     streaming/audio/capture/microphonecapture.h \
+    streaming/audio/capture/micinput.h \
     streaming/audio/capture/micpermission.h \
     streaming/audio/capture/micnoisefilter.h \
     gui/nativechrome.h \
@@ -435,6 +437,7 @@ macx {
 
     SOURCES += \
         streaming/audio/capture/micpermission_mac.mm \
+        streaming/audio/capture/micinput_mac.mm \
         streaming/quitduringstream.cpp \
         gui/nativechrome_mac.mm \
         settings/autoframerate_mac.mm \

@@ -27,11 +27,8 @@ the Moonlight project, or by the Artemis Android client. The Windows and Linux b
   the same bundle identifier, macOS may open the old app instead.
 - **The signature changed in October 2026, so macOS may need the microphone allowed again.** Builds before
   2026-10-17 were signed with an Apple Development certificate; releases since are Developer ID signed. macOS
-  remembers microphone permission per signature, so the first time the new app uses the microphone macOS asks
-  again (Local Network access too). If System Settings > Privacy & Security > Microphone shows Artemis switched on
-  but Artemis says macOS blocks it, the switch belongs to the old signature: switch it off and on, or reset it in
-  Terminal with `tccutil reset Microphone com.moonlight-stream.Moonlight`, then reopen Artemis and allow the
-  microphone. (Artemis can't reset it itself: macOS keeps the old answer for a running app until it restarts.)
+  remembers microphone permission per signature, so the first time the new app uses the microphone macOS asked
+  once more (Local Network access too). Later releases keep the same signature, so macOS doesn't ask again.
 - The interface strings keep saying Moonlight in the source, so every translation still matches; on macOS a
   translator (`settings/streamingpreferences.cpp`) puts Artemis in their place. Names of upstream resources stay:
   the Help menu's Moonlight Setup Guide (it opens Moonlight's wiki), "the Moonlight help" and the Moonlight Internet
@@ -58,13 +55,18 @@ What it adds on top of upstream Moonlight:
     The host advertises support with `a=x-apollo-mic:2`, so normal streaming to any other host is unaffected.
   - Settings > Audio Settings (Audio & Microphone on macOS): **Enable microphone streaming**, the input device, **Noise suppression**
     (macOS only: RNNoise plus a gate that mutes between words), and **Test microphone** with a level meter.
-  - On macOS, turning the microphone on, **Test microphone** or a session with the microphone on asks for
-    microphone permission (macOS's own prompt) if you haven't decided yet. If macOS blocks the microphone, a
-    native alert says so, with **Open Privacy Settings** and **Cancel**. If the microphone can't be opened or
-    sends only digital silence (a muted or unused input, or macOS blocking it), another alert says so, with
-    **Open Privacy Settings**, **Open Sound Settings** and **Cancel**. They appear when you turn the microphone
-    on or test it, and at most once per launch for sessions (before the session connects; for silence, after the
-    session's window closes).
+  - On macOS the microphone is captured through AVFoundation (since build 3414): the input chosen in Settings, or
+    the system default input, followed when it changes (and when a chosen input is unplugged and plugged back in),
+    at 48 kHz with all of the input's channels mixed down to mono. Builds up to 3413 captured through SDL
+    (sdl2-compat on SDL3), which sent the host only silence in three setups, reproduced on a test Mac with a tone
+    played into a loopback input: an input picked by name in Settings wasn't opened (SDL fell back to the default
+    input), a microphone on the second channel of an input was dropped (SDL kept only the first), and a change of
+    the default input wasn't followed. Windows and Linux still capture through SDL.
+  - Permission: macOS asks once, with its own prompt, the first time the microphone is needed (turning microphone
+    streaming on, **Test microphone**, or a session with the microphone on). Artemis shows no alerts of its own.
+    If the microphone isn't allowed, Settings > Audio & Microphone shows one line saying so, with an
+    **Open Privacy Settings** link, and sessions go on without the microphone. The **Test microphone** meter shows
+    whether the input hears anything.
 - **Native macOS look** (macOS only; Windows and Linux keep upstream's Material look, apart from tooltips now
   wrapping at 400 px as upstream intended):
   - A native toolbar with SF Symbols in the title bar, drawn on Liquid Glass on macOS 26 and later.

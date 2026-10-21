@@ -13,9 +13,6 @@ void MicPermission::request(QObject* context, std::function<void(bool granted)> 
     QMetaObject::invokeMethod(context, [callback]() { callback(true); }, Qt::QueuedConnection);
 }
 
-void MicPermission::explain(Problem, const QString&, std::function<void()> then)
+void MicPermission::openPrivacySettings()
 {
-    if (then) {
-        QMetaObject::invokeMethod(qApp, then, Qt::QueuedConnection);
-    }
 }

@@ -10,9 +10,9 @@
 #include <thread>
 #include <vector>
 
-#include <SDL.h>
 #include <opus.h>
 
+#include "micinput.h"
 #include "micnoisefilter.h"
 
 class MicrophoneCapture : public QObject
@@ -31,25 +31,21 @@ public:
     // Call before initialize()
     void setNoiseSuppression(bool enabled);
 
-    // True when at least 3 seconds were captured and every sample was exactly zero:
-    // how macOS hands over a microphone it blocks
+    // True when at least 3 seconds were captured and every sample was exactly zero (for the log)
     bool heardOnlySilence() const;
 
 private:
-    static void audioCallback(void* userdata, Uint8* stream, int len);
-    void handleAudioData(const Uint8* stream, int len);
+    void handleAudioData(const int16_t* samples, int sampleCount);
     void clearBufferedSamples();
     void encoderLoop();
 
-    SDL_AudioDeviceID m_DeviceId;
-    SDL_AudioSpec m_ObtainedSpec;
+    std::unique_ptr<MicInput> m_Input;
     OpusEncoder* m_Encoder;
     std::vector<opus_int16> m_SampleBuffer;
     std::array<unsigned char, 1400> m_EncodedPacket;
     std::atomic_bool m_Streaming;
     std::atomic_bool m_StopEncoderThread;
     bool m_Initialized;
-    bool m_AudioSubsystemInitialized;
     int m_SendFailures;
     bool m_Enabled;
     bool m_FirstPacketLogged;

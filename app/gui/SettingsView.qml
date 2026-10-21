@@ -1232,7 +1232,7 @@ Flickable {
                         StreamingPreferences.refreshMicrophoneMonitor()
                     }
                     // Only when the user turns it on (not each time Settings opens): macOS's
-                    // prompt, or why macOS blocks the microphone
+                    // prompt the first time
                     onToggled: {
                         if (checked) {
                             StreamingPreferences.requestMicrophonePermission()
@@ -1355,7 +1355,33 @@ Flickable {
                     width: parent.width
                     wrapMode: Text.Wrap
                     font.pointSize: 10
+                    visible: !microphoneBlockedLabel.visible
                     text: StreamingPreferences.microphoneMonitorStatus
+                }
+
+                // macOS doesn't allow the microphone: this line, never an alert
+                Label {
+                    id: microphoneBlockedLabel
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    font.pointSize: 10
+                    visible: StreamingPreferences.microphoneBlocked && enableMicrophoneCheck.checked
+                    textFormat: Text.StyledText
+                    text: qsTr("macOS doesn't allow Moonlight to use the microphone.") + " <a href=\"privacy\">" + qsTr("Open Privacy Settings") + "</a>"
+                    onLinkActivated: StreamingPreferences.openMicrophonePrivacySettings()
+                    Accessible.name: qsTr("macOS doesn't allow Moonlight to use the microphone.")
+
+                    Component.onCompleted: StreamingPreferences.refreshMicrophonePermission()
+
+                    // Back from System Settings with the switch turned on
+                    Connections {
+                        target: Qt.application
+                        function onStateChanged() {
+                            if (Qt.application.state === Qt.ApplicationActive) {
+                                StreamingPreferences.refreshMicrophonePermission()
+                            }
+                        }
+                    }
                 }
             }
         }

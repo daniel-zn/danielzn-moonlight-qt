@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "streaming/audio/capture/micinput.h"
 #include "streaming/audio/capture/micnoisefilter.h"
 
 #include "SDL_compat.h"
@@ -167,6 +168,8 @@ public:
     Q_PROPERTY(QString microphoneMonitorStatus READ microphoneMonitorStatus NOTIFY microphoneMonitorStatusChanged)
     Q_PROPERTY(bool microphoneTestRunning READ microphoneTestRunning NOTIFY microphoneTestRunningChanged)
     Q_PROPERTY(bool microphoneMonitorSignalDetected READ microphoneMonitorSignalDetected NOTIFY microphoneMonitorSignalDetectedChanged)
+    // macOS doesn't allow the microphone (Settings shows one quiet line, never an alert)
+    Q_PROPERTY(bool microphoneBlocked READ microphoneBlocked NOTIFY microphoneBlockedChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
@@ -190,12 +193,15 @@ public:
     Q_INVOKABLE void setMicrophoneMonitorActive(bool active);
     Q_INVOKABLE void refreshMicrophoneMonitor();
     Q_INVOKABLE void requestMicrophonePermission();
+    Q_INVOKABLE void refreshMicrophonePermission();
+    Q_INVOKABLE void openMicrophonePrivacySettings();
 
     QStringList microphoneDevices() const;
     double microphoneMonitorLevel() const;
     QString microphoneMonitorStatus() const;
     bool microphoneTestRunning() const;
     bool microphoneMonitorSignalDetected() const;
+    bool microphoneBlocked() const;
 
     // Directly accessible members for preferences
     int width;
@@ -280,6 +286,7 @@ signals:
     void microphoneMonitorStatusChanged();
     void microphoneTestRunningChanged();
     void microphoneMonitorSignalDetectedChanged();
+    void microphoneBlockedChanged();
     void mouseButtonsChanged();
     void muteOnFocusLossChanged();
     void backgroundGamepadChanged();
@@ -292,11 +299,9 @@ signals:
 
 private:
     explicit StreamingPreferences(QQmlEngine *qmlEngine);
-    static void microphoneMonitorCallback(void* userdata, Uint8* stream, int len);
-
     bool startMicrophoneMonitor();
     void stopMicrophoneMonitor(const QString& status = QString());
-    void processMicrophoneMonitorData(const Uint8* stream, int len);
+    void processMicrophoneMonitorData(const int16_t* samples, int sampleCount);
     void updateMicrophoneMonitorState();
     void setMicrophoneMonitorStatus(const QString& status);
 
@@ -304,16 +309,17 @@ private:
 
     QQmlEngine* m_QmlEngine;
     QStringList m_MicrophoneDevices;
-    SDL_AudioDeviceID m_MicrophoneMonitorDeviceId;
-    SDL_AudioSpec m_MicrophoneMonitorSpec;
+    std::unique_ptr<MicInput> m_MicrophoneMonitorInput;
     QTimer* m_MicrophoneMonitorTimer;
     std::atomic<int> m_PendingMicrophonePeak;
     std::unique_ptr<MicNoiseFilter> m_MicrophoneMonitorFilter;  // Used only by the audio callback while open
     std::vector<int16_t> m_MicrophoneMonitorPending;
     std::atomic<int> m_MicrophoneCallbackCount;  // Audio callbacks since the test opened the device
     bool m_MicrophoneSignalEverSeen;
-    std::atomic_bool m_MicrophoneRawSignalSeen;  // Any non-zero sample before noise suppression
-    bool m_MicrophoneSilenceExplained;
+    // Before noise suppression, since the test opened the device (logged when it stops)
+    std::atomic<int64_t> m_MicrophoneRawSamples;
+    std::atomic<int64_t> m_MicrophoneRawNonZero;
+    std::atomic<int> m_MicrophoneRawPeak;
     qint64 m_MicrophoneMonitorStartMs;
     QString m_MicrophoneMonitorDeviceLabel;
     double m_MicrophoneMonitorLevel;
@@ -321,5 +327,5 @@ private:
     bool m_MicrophonePermissionRequestPending;
     bool m_MicrophoneMonitorSignalDetected;
     QString m_MicrophoneMonitorStatus;
-    bool m_MicrophoneMonitorHoldsAudio;  // The test holds a reference on SDL's audio subsystem
+    bool m_MicrophoneBlocked;
 };

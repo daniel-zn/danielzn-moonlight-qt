@@ -4,16 +4,14 @@
 #include <algorithm>
 #include <chrono>
 #include <Limelight.h>
+#include <SDL.h>
 
 MicrophoneCapture::MicrophoneCapture(QObject* parent)
     : QObject(parent)
-    , m_DeviceId(0)
-    , m_ObtainedSpec({})
     , m_Encoder(nullptr)
     , m_Streaming(false)
     , m_StopEncoderThread(false)
     , m_Initialized(false)
-    , m_AudioSubsystemInitialized(false)
     , m_SendFailures(0)
     , m_Enabled(false)
     , m_FirstPacketLogged(false)
@@ -33,14 +31,7 @@ MicrophoneCapture::~MicrophoneCapture()
         m_EncoderThread.join();
     }
 
-    if (m_DeviceId != 0) {
-        SDL_CloseAudioDevice(m_DeviceId);
-        m_DeviceId = 0;
-    }
-
-    if (m_AudioSubsystemInitialized) {
-        SDL_QuitSubSystem(SDL_INIT_AUDIO);
-    }
+    m_Input.reset();
 
     if (m_Encoder != nullptr) {
         opus_encoder_destroy(m_Encoder);
@@ -54,21 +45,12 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
         return true;
     }
 
-    // Don't pop a permission prompt over the stream. The Settings page asks
-    // when the user turns microphone streaming on.
+    // Never a permission prompt over the stream: Session::start() asked before connecting
     if (MicPermission::status() != MicPermission::Status::Granted) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "Microphone access hasn't been granted to Moonlight; streaming without the microphone");
         return false;
     }
-
-    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "SDL_InitSubSystem(SDL_INIT_AUDIO) failed for microphone capture: %s",
-                    SDL_GetError());
-        return false;
-    }
-    m_AudioSubsystemInitialized = true;
 
     int opusError = OPUS_OK;
     m_Encoder = opus_encoder_create(kSampleRate, kChannels, OPUS_APPLICATION_VOIP, &opusError);
@@ -89,59 +71,24 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
     opus_encoder_ctl(m_Encoder, OPUS_SET_PACKET_LOSS_PERC(5));
     opus_encoder_ctl(m_Encoder, OPUS_SET_EXPERT_FRAME_DURATION(OPUS_FRAMESIZE_20_MS));
 
-    SDL_AudioSpec desired = {};
-    desired.freq = kSampleRate;
-    desired.format = AUDIO_S16SYS;
-    desired.channels = kChannels;
-    desired.samples = kFrameSize;
-    desired.callback = &MicrophoneCapture::audioCallback;
-    desired.userdata = this;
-
-    const char* selectedDevice = deviceName.empty() ? nullptr : deviceName.c_str();
-    m_DeviceId = SDL_OpenAudioDevice(selectedDevice, 1, &desired, &m_ObtainedSpec, 0);
-    if (m_DeviceId == 0 && selectedDevice != nullptr) {
+    m_Input = MicInput::create();
+    QString error;
+    bool fellBack = false;
+    if (!m_Input->open(QString::fromStdString(deviceName),
+                       [this](const int16_t* samples, int count) { handleAudioData(samples, count); },
+                       &error, &fellBack)) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "SDL_OpenAudioDevice() failed for requested microphone '%s': %s. Falling back to default input device.",
-                    selectedDevice,
-                    SDL_GetError());
-        m_DeviceId = SDL_OpenAudioDevice(nullptr, 1, &desired, &m_ObtainedSpec, 0);
-    }
-
-    if (m_DeviceId == 0) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "SDL_OpenAudioDevice() failed for microphone capture: %s",
-                    SDL_GetError());
+                    "Couldn't open the microphone for capture: %s",
+                    error.toUtf8().constData());
+        m_Input.reset();
         return false;
     }
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                "Microphone capture device: %s (%d Hz, %d channels, format 0x%x, %d sample callback target)",
-                selectedDevice != nullptr ? selectedDevice : "<default>",
-                m_ObtainedSpec.freq,
-                m_ObtainedSpec.channels,
-                m_ObtainedSpec.format,
-                m_ObtainedSpec.samples);
+                "Microphone capture device: %s%s",
+                m_Input->describe().toUtf8().constData(),
+                fellBack ? " (the chosen input isn't available)" : "");
 
-    if (m_ObtainedSpec.freq != kSampleRate ||
-            m_ObtainedSpec.channels != kChannels ||
-            m_ObtainedSpec.format != AUDIO_S16SYS) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Microphone capture format mismatch: got %d Hz, %d channels, format 0x%x",
-                    m_ObtainedSpec.freq,
-                    m_ObtainedSpec.channels,
-                    m_ObtainedSpec.format);
-        return false;
-    }
-
-    if (m_ObtainedSpec.samples != kFrameSize) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Microphone capture backend is delivering %d-sample callbacks; outgoing Opus packets will be paced at %d-sample (%d ms) intervals",
-                    m_ObtainedSpec.samples,
-                    kFrameSize,
-                    (kFrameSize * 1000) / kSampleRate);
-    }
-
-    SDL_PauseAudioDevice(m_DeviceId, 1);
     if (m_NoiseSuppression) {
         m_NoiseFilter = std::make_unique<MicNoiseFilter>();
     }
@@ -156,7 +103,7 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
 
 bool MicrophoneCapture::start()
 {
-    if (!m_Enabled || !m_Initialized || m_DeviceId == 0 || !LiIsMicrophoneStreamActive()) {
+    if (!m_Enabled || !m_Initialized || !m_Input || !LiIsMicrophoneStreamActive()) {
         return false;
     }
 
@@ -166,14 +113,14 @@ bool MicrophoneCapture::start()
     m_BufferCondition.notify_all();
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "Microphone capture streaming started; negotiated mic stream is active");
-    SDL_PauseAudioDevice(m_DeviceId, 0);
+    m_Input->setRunning(true);
     return true;
 }
 
 void MicrophoneCapture::stop()
 {
-    if (m_DeviceId != 0) {
-        SDL_PauseAudioDevice(m_DeviceId, 1);
+    if (m_Input) {
+        m_Input->setRunning(false);
     }
 
     m_Streaming.store(false, std::memory_order_release);
@@ -200,22 +147,11 @@ void MicrophoneCapture::setEnabled(bool enabled)
     }
 }
 
-void MicrophoneCapture::audioCallback(void* userdata, Uint8* stream, int len)
+void MicrophoneCapture::handleAudioData(const int16_t* inputSamples, int sampleCount)
 {
-    auto* capture = static_cast<MicrophoneCapture*>(userdata);
-    if (capture != nullptr) {
-        capture->handleAudioData(stream, len);
-    }
-}
-
-void MicrophoneCapture::handleAudioData(const Uint8* stream, int len)
-{
-    if (!m_Streaming.load(std::memory_order_acquire) || stream == nullptr || len <= 0) {
+    if (!m_Streaming.load(std::memory_order_acquire) || inputSamples == nullptr || sampleCount <= 0) {
         return;
     }
-
-    const auto* inputSamples = reinterpret_cast<const opus_int16*>(stream);
-    const int sampleCount = len / (int)sizeof(opus_int16);
 
     m_CapturedSamples.fetch_add(sampleCount, std::memory_order_relaxed);
     if (!m_HeardSignal.load(std::memory_order_relaxed) &&
