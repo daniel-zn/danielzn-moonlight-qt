@@ -1988,20 +1988,22 @@ void Session::exec()
     }
 #endif
 
+    // The window icon is Moonlight's logo on Windows and Linux. macOS shows the bundle's
+    // icon (Artemis), and the Mac app doesn't carry the logo.
+    SDL_Surface* iconSurface = nullptr;
+#ifndef Q_OS_DARWIN
     QSvgRenderer svgIconRenderer(QString(":/res/moonlight.svg"));
     QImage svgImage(ICON_SIZE, ICON_SIZE, QImage::Format_RGBA8888);
     svgImage.fill(0);
 
     QPainter svgPainter(&svgImage);
     svgIconRenderer.render(&svgPainter);
-    SDL_Surface* iconSurface = SDL_CreateRGBSurfaceWithFormatFrom((void*)svgImage.constBits(),
-                                                                  svgImage.width(),
-                                                                  svgImage.height(),
-                                                                  32,
-                                                                  4 * svgImage.width(),
-                                                                  SDL_PIXELFORMAT_RGBA32);
-#ifndef Q_OS_DARWIN
-    // Other platforms seem to preserve our Qt icon when creating a new window.
+    iconSurface = SDL_CreateRGBSurfaceWithFormatFrom((void*)svgImage.constBits(),
+                                                     svgImage.width(),
+                                                     svgImage.height(),
+                                                     32,
+                                                     4 * svgImage.width(),
+                                                     SDL_PIXELFORMAT_RGBA32);
     if (iconSurface != nullptr) {
         // This must be called before entering full-screen mode on Windows
         // or our icon will not persist when toggling to windowed mode

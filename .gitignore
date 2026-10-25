@@ -7,3 +7,7 @@ build/
 libs/
 config.tests/*/.qmake.stash
 config.tests/*/Makefile
+
+# Compiled from app/deploy/macos/icon/Artemis.icon at build time (scripts/generate-mac-icon.sh)
+app/deploy/macos/icon/Assets.car
+app/deploy/macos/icon/Artemis.icns

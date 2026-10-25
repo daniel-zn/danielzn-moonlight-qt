@@ -487,6 +487,10 @@ RESOURCES += \
     resources.qrc \
     qml.qrc
 
+# Moonlight's logo is the window icon on Windows and Linux; macOS draws Artemis's icon
+# from the bundle, so the Mac app doesn't carry the logo
+!macx: RESOURCES += windowicon.qrc
+
 TRANSLATIONS += \
     languages/qml_zh_CN.ts \
     languages/qml_de.ts \
@@ -604,9 +608,12 @@ macx {
 
     QMAKE_INFO_PLIST = $$OUT_PWD/Info.plist
 
-    # Icon Composer icon compiled by scripts/generate-mac-icon.sh: Assets.car for the
-    # macOS 26 icon, Artemis.icns for older versions
-    APP_BUNDLE_RESOURCES.files = deploy/macos/icon/Assets.car deploy/macos/icon/Artemis.icns
+    # The Icon Composer icon (deploy/macos/icon/Artemis.icon) compiled on every qmake run by
+    # scripts/generate-mac-icon.sh: Assets.car for the macOS 26 icon, Artemis.icns for older
+    # versions (and the DMG's volume icon). Nothing compiled from it is kept in the repository.
+    !system(bash $$shell_quote($$PWD/../scripts/generate-mac-icon.sh) $$shell_quote($$OUT_PWD/icon)): \
+        error("generate-mac-icon.sh failed")
+    APP_BUNDLE_RESOURCES.files = $$OUT_PWD/icon/Assets.car $$OUT_PWD/icon/Artemis.icns
     APP_BUNDLE_RESOURCES.path = Contents/Resources
 
     APP_BUNDLE_PLIST.files = $$OUT_PWD/Info.plist
