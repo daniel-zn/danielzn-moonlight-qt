@@ -1,0 +1,24 @@
+{
+  "keep": [
+    "libs",
+    "build/land"
+  ],
+  "workspaces": 1,
+  "checks": [
+    {
+      "name": "build",
+      "run": "t=$(grep -E '^TAG = ' setup-deps.py); if [ ! -d libs/mac ] || [ \"$(cat libs/.land-deps 2>/dev/null)\" != \"$t\" ]; then python3 setup-deps.py && echo \"$t\" > libs/.land-deps || exit 1; fi; mkdir -p build/land && cd build/land && qmake6 ../../moonlight-qt.pro CONFIG+=release >/dev/null && make -j$(sysctl -n hw.perflevel0.physicalcpu 2>/dev/null || echo 4) -s",
+      "inputs": [
+        "**",
+        "!**/*.md",
+        "!wix/**",
+        "!**/*.bat",
+        "!**/*.ps1",
+        "!scripts/build-steamlink-app.sh",
+        "!scripts/build-appimage.sh"
+      ],
+      "line": "build",
+      "timeout": 45
+    }
+  ]
+}
